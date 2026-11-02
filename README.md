@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 2.1 — depth writes only when the depth moves
+
+- `paint()` re-wrote eight CSS custom properties on the root element on every frame of the tilt spring, even when a property's formatted value had not changed since the last frame. Each one now remembers what it last wrote and skips the write when the new value is identical: twenty frames in an unchanged state perform no DOM writes at all, down from 160, while the values applied to the page are byte-for-byte the same as before.
+
 ### 2.0 — the backdrop pauses when nobody is looking
 
 - The three blurred blobs behind the glass kept their 14-second float loop compositing while the player was collapsed to the bubble and while the app was in the background, where none of it is on screen. Both states now set `animation-play-state: paused` on the blob field, so the loop freezes in place rather than disappearing — the frame you see is identical, and the collapse animation, reopening and returning to the app all behave exactly as before.
