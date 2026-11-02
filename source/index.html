@@ -361,8 +361,18 @@ au.ontimeupdate=()=>{
     if(tuCache.dur!==ds){tuCache.dur=ds;$('dur').textContent=ds}
   }
 };
-au.onloadedmetadata=()=>{$('dur').textContent=fmt(au.duration)};
-au.ondurationchange=()=>{if(isFinite(au.duration)&&au.duration>0)$('dur').textContent=fmt(au.duration)};
+/* `au.duration` is `Infinity` for some streams and `NaN` until metadata arrives. Both used to be
+   run through fmt() and printed as "0:00", which reads as a zero-length track. Every read site
+   now treats a non-finite or non-positive duration as unknown and leaves the "--:--" marker
+   resetSeek() writes, so the readout says "we don't know yet" instead of "nothing to play". */
+const durOk=()=>{const d=au.duration;return isFinite(d)&&d>0};
+function showDur(){
+  if(!durOk()){tuCache.dur=null;EL.dur.textContent='--:--';return}
+  const ds=fmt(au.duration);
+  if(tuCache.dur!==ds){tuCache.dur=ds;EL.dur.textContent=ds}
+}
+au.onloadedmetadata=showDur;
+au.ondurationchange=showDur;
 
 /* seek bar: don't let timeupdate fight the user's thumb */
 const sk=$('seek');
