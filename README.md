@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 2.4 — a refused play says so
+
+- Every `au.play()` rejection was swallowed by `.catch(()=>{})`, so a track the platform refused to start looked like a dead button; the rejection is now classified (autoplay policy vs unplayable file) and surfaced through a `data-blocked` state and an off-screen status message, with the stale `playing` state dropped when nothing is actually playing — nothing on screen moves.
+
 ### 2.3 — an unknown length says so
 
 - `loadedmetadata` and `durationchange` formatted `au.duration` unconditionally, and `fmt()` turns the `Infinity` some streams report (or the `NaN` that arrives before metadata) into `0:00` — a file with an unknown length read as a zero-length one. Both handlers now share `showDur()`, which leaves the `--:--` marker the player already uses for "not known yet" whenever the duration is not finite and positive, and clears the cached value so a real duration arriving later still lands. Nothing else moves: every element's geometry and computed style is identical, and the times row is pixel-identical.

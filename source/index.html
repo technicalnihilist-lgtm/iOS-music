@@ -111,6 +111,8 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 button,.it,.chip,.pill,.seg button,.sw,.opt{touch-action:manipulation}
 input[type=range]{touch-action:pan-y}
 .filein{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;left:-9999px}
+/* off-screen status region: out of flow, so it never affects layout or paint */
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;pointer-events:none;left:-9999px}
 .tilt::after{content:"";position:absolute;inset:0;border-radius:44px;pointer-events:none;
   background:radial-gradient(58% 44% at var(--lx,50%) var(--ly,30%),rgba(255,255,255,.30),rgba(255,255,255,0) 72%);
   opacity:var(--glow,0);transition:opacity .35s}
@@ -201,6 +203,7 @@ input[type=range]{touch-action:pan-y}
 </section>
 
 <audio id="au" preload="auto" playsinline></audio>
+<div class="sr" id="live" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script>
 const $=id=>document.getElementById(id);
@@ -218,6 +221,43 @@ let switching=false;   // a new source is loading: ignore the pause event it fir
 let dragging=false;    // the user is scrubbing the seek bar
 let fails=0;           // consecutive tracks that refused to play
 let swapToken=0;       // guards the delayed title swap against fast track skipping
+
+/* A refused play() used to be swallowed by .catch(()=>{}), so a track the platform would not
+   start looked exactly like a dead button. The rejection is now classified and surfaced
+   without adding anything to the screen: a `data-blocked` state on the app element, a message
+   in the off-screen status region for assistive tech, and - because a refused play leaves the
+   previous track's "playing" class behind - the false playing state is dropped, so the button
+   shows "play" (the thing that will actually work) instead of "pause". No styles, geometry,
+   copy or animation change. */
+let blocked=false;
+const live=$('live');
+let liveTimer=null;
+function announce(msg){
+  if(!live)return;
+  if(liveTimer){clearTimeout(liveTimer);liveTimer=null}
+  live.textContent='';
+  if(!msg)return;
+  liveTimer=setTimeout(()=>{liveTimer=null;live.textContent=msg},20);  /* a repeat still re-announces */
+}
+function setBlocked(v,msg){
+  if(blocked!==v){blocked=v;app.dataset.blocked=v?'1':'0'}
+  announce(msg||'');                          /* clearing the text on recovery leaves nothing stale */
+}
+function playRefused(err){
+  const denied=!!err&&(err.name==='NotAllowedError'||err.name==='SecurityError');
+  switching=false;
+  if(au.paused){
+    app.classList.remove('playing');
+    if('mediaSession' in navigator){try{navigator.mediaSession.playbackState='paused'}catch(e){}}
+  }
+  setBlocked(true,denied?'Playback blocked. Tap play to start.':"Can't play this file.");
+}
+function attemptPlay(onOk){
+  let p;
+  try{p=au.play()}catch(e){playRefused(e);return}
+  if(!p||typeof p.then!=='function'){if(onOk)onOk();return}
+  p.then(()=>{setBlocked(false,'');if(onOk)onOk()}).catch(playRefused);
+}
 
 function synth(t){
   const sr=22050,len=sr*24,pcm=new Int16Array(len);
@@ -301,8 +341,7 @@ function load(i,autoplay,dir){
     return;
   }
   if(autoplay){
-    const p=au.play();
-    if(p&&p.then)p.then(()=>{fails=0}).catch(()=>{switching=false});
+    attemptPlay(()=>{fails=0});
   }else{
     switching=false;
   }
@@ -311,7 +350,7 @@ function load(i,autoplay,dir){
 }
 
 /* transport */
-$('pp').onclick=()=>{if(!tracks.length){$('file').click();return}au.paused?au.play().catch(()=>{}):au.pause()};
+$('pp').onclick=()=>{if(!tracks.length){$('file').click();return}au.paused?attemptPlay():au.pause()};
 $('next').onclick=()=>{if(!tracks.length){$('file').click();return}load(idx+1,!au.paused||au.ended,1)};
 $('prev').onclick=()=>{
   if(!tracks.length){$('file').click();return}
@@ -666,7 +705,7 @@ $('list').onclick=e=>{
   const r=e.target.closest('.it');if(!r)return;
   if(r.dataset.add){$('file').click();return}
   const i=+r.dataset.i;
-  if(i===idx){au.paused?au.play().catch(()=>{}):au.pause();return}
+  if(i===idx){au.paused?attemptPlay():au.pause();return}
   load(i,true,i>idx?1:-1);
 };
 
@@ -685,7 +724,7 @@ if('mediaSession' in navigator){
   const bind=(a,fn)=>{try{navigator.mediaSession.setActionHandler(a,fn)}catch(e){}};
   bind('nexttrack',()=>$('next').click());
   bind('previoustrack',()=>$('prev').click());
-  bind('play',()=>au.play().catch(()=>{}));
+  bind('play',()=>attemptPlay());
   bind('pause',()=>au.pause());
 }
 </script>

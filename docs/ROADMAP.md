@@ -62,8 +62,19 @@ the symptom is. Do not add "refactor everything" style entries.
   when the duration is not finite and positive, and clears the cached value so a real duration
   arriving later still lands. The `timeupdate`, seek-bar and previous-button read sites were already
   guarded.
-- [ ] 11. `au.play()` rejections are swallowed by `.catch(()=>{})`. Surface a non-intrusive state so
-  the user knows playback was blocked rather than broken.
+- [x] 11. `au.play()` rejections are swallowed by `.catch(()=>{})`. Surface a non-intrusive state so
+  the user knows playback was blocked rather than broken. *(2.4)* — every call site (transport
+  button, playlist row, autoplay on load, media-session `play`) now goes through one `attemptPlay()`
+  that classifies the rejection: `NotAllowedError`/`SecurityError` is the autoplay policy refusing,
+  anything else is a file the platform cannot play. The state is surfaced without touching the
+  interface — a `data-blocked` attribute on the app element, and a message in an off-screen
+  `role="status"` region that assistive tech reads ("Playback blocked. Tap play to start." vs
+  "Can't play this file."). A refused play also left the *previous* track's `playing` class behind,
+  so the button showed "pause" for a track that was never running; that false state is now dropped
+  when `au` really is paused, which is what makes the button show "play" — the thing that works.
+  Verified: the message and flag appear on a stubbed `NotAllowedError` and clear on a successful
+  play; all 107 elements keep byte-identical geometry and computed styles, and the rendered page is
+  pixel-identical to the previous build.
 - [ ] 12. The "skip unplayable track" path can walk the whole playlist on a run of bad files. Cap
   the attempts and stop with a clear message.
 - [ ] 13. A cancelled or empty file-picker result should leave the playlist untouched (verify, and
