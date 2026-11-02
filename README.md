@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 2.3 — an unknown length says so
+
+- `loadedmetadata` and `durationchange` formatted `au.duration` unconditionally, and `fmt()` turns the `Infinity` some streams report (or the `NaN` that arrives before metadata) into `0:00` — a file with an unknown length read as a zero-length one. Both handlers now share `showDur()`, which leaves the `--:--` marker the player already uses for "not known yet" whenever the duration is not finite and positive, and clears the cached value so a real duration arriving later still lands. Nothing else moves: every element's geometry and computed style is identical, and the times row is pixel-identical.
+
 ### 2.2 — the player looks its nodes up once
 
 - `load()` re-queried nine DOM nodes by id on every track change, skip and playlist tap; they are now resolved once at startup into a single element map, taking a `load()` call from ten DOM lookups to one with no change to anything on screen.
