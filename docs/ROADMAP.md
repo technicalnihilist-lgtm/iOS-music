@@ -30,8 +30,12 @@ the symptom is. Do not add "refactor everything" style entries.
   blob field, which sets `animation-play-state` on the three blobs. The loop freezes in place, so
   the frame on screen is unchanged; the collapse animation itself still runs, and reopening or
   returning to the tab resumes exactly where it stopped.
-- [ ] 7. `paint()` writes nine CSS custom properties every frame, even when the value is unchanged.
-  Compare against the previous value and skip identical writes.
+- [x] 7. `paint()` writes nine CSS custom properties every frame, even when the value is unchanged.
+  Compare against the previous value and skip identical writes. *(2.1)* — each of the eight
+  properties `paint()` sets (the item's "nine" counts `--glow` twice; there are eight) now keeps its
+  last written string and skips the write when the formatted value is identical. Twenty
+  back-to-back frames in an unchanged state went from 160 `setProperty` calls to 0; a frame whose
+  values really moved still writes every one that changed.
 - [ ] 8. `load()` re-queries the same DOM nodes on every call. Hoist the lookups into a single
   element map created once.
 - [ ] 9. Audit for properties that trigger layout in hot paths (width/height/top/left) and replace
