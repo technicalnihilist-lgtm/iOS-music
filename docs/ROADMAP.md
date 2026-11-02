@@ -41,12 +41,27 @@ the symptom is. Do not add "refactor everything" style entries.
   `artist`, `art`, `.meta`, `hu`, `huV`, `seek`, `cur`, `dur`) are resolved once at startup into
   `EL`; nothing ever replaces those elements, so the references stay valid. A `load()` call now
   performs one `getElementById` (inside `renderList`) instead of ten, measured in the harness.
-- [ ] 9. Audit for properties that trigger layout in hot paths (width/height/top/left) and replace
-  with transforms where the visual result is identical.
+- [x] 9. Audit for properties that trigger layout in hot paths (width/height/top/left) and replace
+  with transforms where the visual result is identical. *(2.3)* — audited with CDP layout counters
+  rather than by eye. The depth loop (`paint()` on every frame of the tilt spring) and `timeupdate`
+  cause no layout at all: every value they write lands on `transform`, `opacity`, `box-shadow` or a
+  gradient. The one layout-triggering property left in a hot path is the playlist equaliser's
+  `height` animation — 24 layout passes in 2 s while the current row is on screen, and cancelling
+  just those three animations takes it to 1. It was **not** replaced: a `transform: scaleY()`
+  version scales the 2px `border-radius` along with the bar, so the caps change shape at every point
+  of the cycle (118–200 differing pixels per frame at 4× DPR, measured), which the identical
+  interface rule forbids. Pausing it while collapsed would gain nothing either — the browser already
+  drops the animation once `display: none` hides the card.
 
 ## Robustness
 
-- [ ] 10. `au.duration` can be `Infinity` or `NaN` for some files; every read site must guard it.
+- [x] 10. `au.duration` can be `Infinity` or `NaN` for some files; every read site must guard it.
+  *(2.3)* — `loadedmetadata` and `durationchange` ran the raw value through `fmt()`, which turns a
+  non-finite duration into `0:00`, so a stream or a half-parsed file read as a zero-length track.
+  Both handlers now share `showDur()`, which leaves the `--:--` marker `resetSeek()` already writes
+  when the duration is not finite and positive, and clears the cached value so a real duration
+  arriving later still lands. The `timeupdate`, seek-bar and previous-button read sites were already
+  guarded.
 - [ ] 11. `au.play()` rejections are swallowed by `.catch(()=>{})`. Surface a non-intrusive state so
   the user knows playback was blocked rather than broken.
 - [ ] 12. The "skip unplayable track" path can walk the whole playlist on a run of bad files. Cap
