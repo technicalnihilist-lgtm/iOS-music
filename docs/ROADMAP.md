@@ -75,8 +75,17 @@ the symptom is. Do not add "refactor everything" style entries.
   Verified: the message and flag appear on a stubbed `NotAllowedError` and clear on a successful
   play; all 107 elements keep byte-identical geometry and computed styles, and the rendered page is
   pixel-identical to the previous build.
-- [ ] 12. The "skip unplayable track" path can walk the whole playlist on a run of bad files. Cap
-  the attempts and stop with a clear message.
+- [x] 12. The "skip unplayable track" path can walk the whole playlist on a run of bad files. Cap
+  the attempts and stop with a clear message. *(2.5)* — `au.onerror` advanced to the next track for
+  as long as `fails < tracks.length`, so six unplayable files in a row meant six source swaps and
+  six swap animations before anything settled, and a long playlist meant dozens. The chain is now
+  capped at three consecutive failures (`MAX_SKIP`): on a six-file playlist of undecodable sources
+  the old build walked all five remaining entries, the new one stops after two. The message the
+  path already showed ("Can't play this file") is unchanged on screen; the count goes to the
+  off-screen status region ("Stopped after 3 unplayable tracks…"), so nothing on the page moves.
+  Stopping also cancels the title swap still queued from the last attempt, which used to land
+  ~360 ms later and replace the message with the track's artist, and a `stopped` flag keeps the
+  trailing `play()` rejection from talking over it with the generic text.
 - [ ] 13. A cancelled or empty file-picker result should leave the playlist untouched (verify, and
   fix if not).
 - [ ] 14. Track hues from the golden-angle step can exceed 359 on long lists; clamp to 0–359.

@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 2.5 — a run of bad files stops
+
+- The skip-unplayable path advanced through every remaining track while the failure count stayed below the playlist length, so a playlist full of unplayable files walked the whole list; the chain now stops after three consecutive failures, keeps the same on-screen message and reports the count through the off-screen status region.
+
 ### 2.4 — a refused play says so
 
 - Every `au.play()` rejection was swallowed by `.catch(()=>{})`, so a track the platform refused to start looked like a dead button; the rejection is now classified (autoplay policy vs unplayable file) and surfaced through a `data-blocked` state and an off-screen status message, with the stale `playing` state dropped when nothing is actually playing — nothing on screen moves.

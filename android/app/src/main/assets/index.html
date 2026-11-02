@@ -220,6 +220,8 @@ let idx=0;
 let switching=false;   // a new source is loading: ignore the pause event it fires
 let dragging=false;    // the user is scrubbing the seek bar
 let fails=0;           // consecutive tracks that refused to play
+const MAX_SKIP=3;      // how many consecutive unplayable tracks the skip chain may walk
+let stopped=false;     // the skip chain gave up and reported; a trailing play() rejection must not talk over it
 let swapToken=0;       // guards the delayed title swap against fast track skipping
 
 /* A refused play() used to be swallowed by .catch(()=>{}), so a track the platform would not
@@ -250,9 +252,13 @@ function playRefused(err){
     app.classList.remove('playing');
     if('mediaSession' in navigator){try{navigator.mediaSession.playbackState='paused'}catch(e){}}
   }
+  /* the skip chain already said why it stopped; the rejection that follows the same bad source
+     would replace that message with the generic one, so leave it alone */
+  if(stopped&&!denied)return;
   setBlocked(true,denied?'Playback blocked. Tap play to start.':"Can't play this file.");
 }
 function attemptPlay(onOk){
+  stopped=false;               /* any fresh attempt gets a fresh budget of announcements */
   let p;
   try{p=au.play()}catch(e){playRefused(e);return}
   if(!p||typeof p.then!=='function'){if(onOk)onOk();return}
@@ -373,12 +379,22 @@ au.onended=()=>load(idx+1,true,1);
 au.onerror=()=>{
   switching=false;
   fails++;
-  if(tracks.length>1&&fails<tracks.length){
+  /* Bounded skip. This used to advance through the whole playlist on a run of unplayable
+     files - one source swap per entry - so a long list of bad files meant dozens of loads
+     and swap animations before anything settled, and with a large playlist it never settled
+     at all. Three consecutive failures is enough to conclude the run is bad: stop there and
+     say so. The visible copy is the message the path already showed; the specifics go to the
+     off-screen status region, so nothing on screen moves. */
+  if(tracks.length>1&&fails<MAX_SKIP){
     load(idx+1,true,1);
   }else{
+    const n=fails;
     fails=0;
+    stopped=true;
+    swapToken++;                 /* cancel a title swap still queued from the last attempt, or it lands after this message and replaces it */
     app.classList.remove('playing');
     $('artist').textContent="Can't play this file";
+    setBlocked(true,n>1?'Stopped after '+n+" unplayable tracks. Can't play this file.":"Can't play this file.");
   }
 };
 
