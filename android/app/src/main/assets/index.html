@@ -450,18 +450,25 @@ const motionOff=()=>REDUCED||S.motion==='off';
 const driftEl=document.querySelector('.drift');
 const driftBtn=$('driftBtn');
 
+/* last value written for each depth property; undefined means "not yet written" */
+let pmx,pmy,plx,ply,pshx,pshy,pshb,pglow;
 function paint(){
   const d=S.depth/100;
   const mx=tv.x*d,my=tv.y*d;
-  root.setProperty('--mx',mx.toFixed(4));
-  root.setProperty('--my',my.toFixed(4));
-  root.setProperty('--lx',(50+mx*44)+'%');
-  root.setProperty('--ly',(50+my*44)+'%');
   const sk=S.shadow/100,gk=S.glow/100;
-  root.setProperty('--shx',(mx*-20*sk).toFixed(1)+'px');
-  root.setProperty('--shy',(my*-14*sk).toFixed(1)+'px');
-  root.setProperty('--shb',((Math.abs(mx)+Math.abs(my))*22*sk).toFixed(1)+'px');
-  root.setProperty('--glow',(Math.min(1,(Math.abs(mx)+Math.abs(my))*1.1)*gk).toFixed(3));
+  const vmx=mx.toFixed(4),vmy=my.toFixed(4),
+        vlx=(50+mx*44)+'%',vly=(50+my*44)+'%',
+        vshx=(mx*-20*sk).toFixed(1)+'px',vshy=(my*-14*sk).toFixed(1)+'px',
+        vshb=((Math.abs(mx)+Math.abs(my))*22*sk).toFixed(1)+'px',
+        vglow=(Math.min(1,(Math.abs(mx)+Math.abs(my))*1.1)*gk).toFixed(3);
+  if(vmx!==pmx){pmx=vmx;root.setProperty('--mx',vmx)}
+  if(vmy!==pmy){pmy=vmy;root.setProperty('--my',vmy)}
+  if(vlx!==plx){plx=vlx;root.setProperty('--lx',vlx)}
+  if(vly!==ply){ply=vly;root.setProperty('--ly',vly)}
+  if(vshx!==pshx){pshx=vshx;root.setProperty('--shx',vshx)}
+  if(vshy!==pshy){pshy=vshy;root.setProperty('--shy',vshy)}
+  if(vshb!==pshb){pshb=vshb;root.setProperty('--shb',vshb)}
+  if(vglow!==pglow){pglow=vglow;root.setProperty('--glow',vglow)}
 }
 
 function applyS(){
