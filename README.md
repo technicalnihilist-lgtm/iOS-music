@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 2.2 — the player looks its nodes up once
+
+- `load()` re-queried nine DOM nodes by id on every track change, skip and playlist tap; they are now resolved once at startup into a single element map, taking a `load()` call from ten DOM lookups to one with no change to anything on screen.
+
 ### 2.1 — depth writes only when the depth moves
 
 - `paint()` re-wrote eight CSS custom properties on the root element on every frame of the tilt spring, even when a property's formatted value had not changed since the last frame. Each one now remembers what it last wrote and skips the write when the new value is identical: twenty frames in an unchanged state perform no DOM writes at all, down from 160, while the values applied to the page are byte-for-byte the same as before.

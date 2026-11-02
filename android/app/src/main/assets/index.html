@@ -204,6 +204,12 @@ input[type=range]{touch-action:pan-y}
 
 <script>
 const $=id=>document.getElementById(id);
+/* Every node load() and resetSeek() touch, resolved once at startup instead of on
+   each call. Nothing replaces these elements, so the references stay valid. */
+const EL={
+  title:$('title'),artist:$('artist'),art:$('art'),meta:document.querySelector('.meta'),
+  hu:$('hu'),huV:$('huV'),seek:$('seek'),cur:$('cur'),dur:$('dur')
+};
 const au=$('au'),app=$('app'),sheet=$('sheet'),scrim=$('scrim'),bubble=$('bubble');
 const N={C4:261.6,D4:293.7,E4:329.6,F4:349.2,G4:392,A4:440,B4:493.9,C5:523.3,D5:587.3,E5:659.3};
 const tracks=[];
@@ -254,31 +260,31 @@ function setSession(t){
 /* last values written by the timeupdate handler; reset whenever we write these nodes elsewhere */
 const tuCache={p:null,v:null,cur:null,dur:null};
 function resetSeek(){
-  const sk=$('seek');
+  const sk=EL.seek;
   sk.value=0;sk.style.setProperty('--p','0%');
-  $('cur').textContent='0:00';
-  $('dur').textContent='--:--';
+  EL.cur.textContent='0:00';
+  EL.dur.textContent='--:--';
   tuCache.p=tuCache.v=tuCache.cur=tuCache.dur=null;
 }
 
 function load(i,autoplay,dir){
   if(!tracks.length){
-    $('title').textContent='No songs yet';
-    $('artist').textContent='Add songs from your phone';
+    EL.title.textContent='No songs yet';
+    EL.artist.textContent='Add songs from your phone';
     resetSeek();renderList();return;
   }
   idx=(i+tracks.length)%tracks.length;
   const t=tracks[idx];
   const ui=()=>{
-    $('title').textContent=t.t;$('artist').textContent=t.a;
-    $('art').style.setProperty('--ah',t.h);
+    EL.title.textContent=t.t;EL.artist.textContent=t.a;
+    EL.art.style.setProperty('--ah',t.h);
     document.documentElement.style.setProperty('--h',t.h);
-    $('hu').value=t.h;$('huV').textContent=t.h+'°';
-    $('hu').style.setProperty('--p',(t.h/360*100)+'%');
+    EL.hu.value=t.h;EL.huV.textContent=t.h+'°';
+    EL.hu.style.setProperty('--p',(t.h/360*100)+'%');
     renderList();
   };
   if(dir){
-    [$('art'),document.querySelector('.meta')].forEach(el=>{el.style.setProperty('--d',dir);restart(el,'swap')});
+    [EL.art,EL.meta].forEach(el=>{el.style.setProperty('--d',dir);restart(el,'swap')});
     const token=++swapToken;
     setTimeout(()=>{if(token===swapToken)ui()},360);   /* skip if a newer track took over */
   }else ui();
@@ -291,7 +297,7 @@ function load(i,autoplay,dir){
     au.src=t.src;
   }catch(e){
     switching=false;
-    $('artist').textContent="Can't play this file";
+    EL.artist.textContent="Can't play this file";
     return;
   }
   if(autoplay){

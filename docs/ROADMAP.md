@@ -36,8 +36,11 @@ the symptom is. Do not add "refactor everything" style entries.
   last written string and skips the write when the formatted value is identical. Twenty
   back-to-back frames in an unchanged state went from 160 `setProperty` calls to 0; a frame whose
   values really moved still writes every one that changed.
-- [ ] 8. `load()` re-queries the same DOM nodes on every call. Hoist the lookups into a single
-  element map created once.
+- [x] 8. `load()` re-queries the same DOM nodes on every call. Hoist the lookups into a single
+  element map created once. *(2.2)* — the nine nodes `load()`/`resetSeek()` touch (`title`,
+  `artist`, `art`, `.meta`, `hu`, `huV`, `seek`, `cur`, `dur`) are resolved once at startup into
+  `EL`; nothing ever replaces those elements, so the references stay valid. A `load()` call now
+  performs one `getElementById` (inside `renderList`) instead of ten, measured in the harness.
 - [ ] 9. Audit for properties that trigger layout in hot paths (width/height/top/left) and replace
   with transforms where the visual result is identical.
 
