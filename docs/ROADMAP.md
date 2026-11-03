@@ -149,7 +149,19 @@ the symptom is. Do not add "refactor everything" style entries.
   one `load()` runs per burst, and a deliberate later tap still pauses and resumes. 20/20 harness
   checks pass, all 140 elements keep byte-identical geometry and computed style, and the frozen
   render at 2x DPR is pixel-identical (0 of 1,507,920 pixels differ).
-- [ ] 18. Rotation/resize can leave the card mid-tilt; re-measure and reset the tilt target.
+- [x] 18. Rotation/resize can leave the card mid-tilt; re-measure and reset the tilt target.
+  *(3.1)* — `resize` and `orientationchange` dropped the cached artwork rect so the next move
+  re-measured, but they left the *target* tilt where the last `touchmove` put it. A resize that
+  cancels an active touch does not always deliver the `touchend`/`touchcancel` that springs the
+  card back, so the card held the pre-rotation angle with no finger on it, indefinitely. Both
+  layout events now run the same settle a lifted finger does — invalidate the box, zero the
+  target, let the spring return the card flat — while `scroll` still only drops the box (the
+  finger is still down and the next move re-aims it) and a gyro-driven tilt is left alone.
+  Verified in the harness: pressing the artwork and pushing it to the corner reaches `--mx`
+  0.480, and after a `resize` the old build still reads 0.480 while the new one reads 0.000;
+  `orientationchange` behaves the same (0.457 → 0.000), a `touchend` still springs back, a
+  gyro tilt survives a resize, and a fresh gesture after a rotation tilts again. 25/25 checks
+  pass, and all 118 elements keep byte-identical geometry and computed style.
 
 ## Memory and battery
 
