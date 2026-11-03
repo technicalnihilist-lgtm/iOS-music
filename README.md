@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 2.8 — the seek bar stays inside the track
+
+- The bar was handed `currentTime / duration * 100` unchecked, so a stream running past its header duration (VBR MP3, some WAVs) pushed the fill past the end of the track and left the value the slider believed it held out of step with the value it actually held; the position and the time it converts to are now clamped to the track's own range.
+
 ### 2.7 — track hues stay inside 0–359
 
 - The golden-angle hue was rounded before being stored, and for the 611th, 1221st and 1831st track added the rounding landed on exactly 360, a hue outside the 0–359 range the rest of the page assumes; the rounded value is now wrapped, so the colour-shift readout says 0° instead of 360° for that track while the colour itself — identical at 0 and 360 — does not change.
