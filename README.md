@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 3.1 — a rotation can't leave the card stuck mid-tilt
+
+- `resize` and `orientationchange` dropped the cached artwork box but left the tilt target where the last `touchmove` put it, so a rotation that cancelled an active touch — and so never delivered the `touchend` that springs the card back — left the card holding the pre-rotation angle with no finger on it; both layout events now settle it flat, exactly as lifting the finger does, while scrolling still only drops the box and a gyro-driven tilt is left alone.
+
 ### 3.0 — a fast second tap can't stop the track it started
 
 - Tapping a playlist row twice in quick succession ran a second load for the track already on deck, which reloaded the source and queued a pause — so the row stopped the song it had just started; a repeat request for the current track is now a no-op and a repeat tap in the same burst is absorbed, while a deliberate later tap still pauses and resumes.
