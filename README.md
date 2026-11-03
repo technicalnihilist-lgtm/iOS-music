@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 2.7 — track hues stay inside 0–359
+
+- The golden-angle hue was rounded before being stored, and for the 611th, 1221st and 1831st track added the rounding landed on exactly 360, a hue outside the 0–359 range the rest of the page assumes; the rounded value is now wrapped, so the colour-shift readout says 0° instead of 360° for that track while the colour itself — identical at 0 and 360 — does not change.
+
 ### 2.6 — a cancelled picker is a no-op
 
 - Dismissing the system file picker without choosing anything could hand the page `files === null` (the Android WebView reports a back-out that way), and spreading it threw an uncaught `TypeError` on every dismissal; the handler now reads the list defensively, so a cancel in either shape leaves the playlist, the current track and the seek bar untouched.
