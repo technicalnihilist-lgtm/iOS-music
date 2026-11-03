@@ -109,7 +109,20 @@ the symptom is. Do not add "refactor everything" style entries.
   −250/110 degree forms were compared through the canvas filter and are byte-identical, and the deep
   state (611 tracks, current track at the wrap) fingerprints identically to the old build except for
   the readout itself, which now says "0°".
-- [ ] 15. `seek` input should be clamped to `[0, duration]` before assignment.
+- [x] 15. `seek` input should be clamped to `[0, duration]` before assignment. *(2.8)* — both paths
+  that carry a position into the bar were unclamped. `timeupdate` computed
+  `currentTime / duration * 100` and wrote it straight into `--p` and `sk.value`; a stream that runs
+  past its header duration (VBR MP3s and some WAVs report exactly this) hands the bar a
+  `currentTime` greater than `duration`, so a 210.5 s position on a 200 s track produced
+  `--p: 105.25%`. The white fill then ran past the end of the track, and the value the input
+  believed it held drifted out of step with the value it actually held — the element silently clamps
+  to 100, the code kept 105.25. The `input` handler then mapped its percentage back to
+  `currentTime` with no domain check either. Both ends are now clamped: the position into [0, 100]
+  and the resulting time into [0, duration], with a non-finite position or duration treated as a
+  no-op. Verified in the harness — the 210.5 s / 200 s state that produced `--p: 105.25%` now
+  produces 100%, and in-range positions still convert to exactly the time they did before (25% of
+  200 s is still 50 s, and the readout still says 0:50). All 32 checks pass, all 106 elements keep
+  byte-identical geometry and computed style, and the rendered page is pixel-identical.
 - [ ] 16. `deviceorientation` can deliver null `beta`/`gamma`; the guard exists but confirm it also
   handles the first event having only `alpha`.
 - [ ] 17. Rapid taps on a playlist row can call `load()` twice for the same track; make it
