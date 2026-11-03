@@ -135,8 +135,20 @@ the symptom is. Do not add "refactor everything" style entries.
   the new one leaves them untouched and still follows a valid `beta`/`gamma`; 19/19 checks pass,
   and all 116 elements keep byte-identical geometry and computed style with a pixel-identical
   render.
-- [ ] 17. Rapid taps on a playlist row can call `load()` twice for the same track; make it
-  idempotent.
+- [x] 17. Rapid taps on a playlist row can call `load()` twice for the same track; make it
+  idempotent. *(3.0)* — a repeat request for the track already on deck is now a no-op: it no
+  longer re-assigns `au.src`, so the media does not reload, the position does not drop to 0, the
+  swap animation does not replay and the pause the reload queued does not leave the transport
+  showing "play" for a track that is starting. The row handler had the matching hole — it read a
+  repeat tap in the same burst as a request to pause and stopped the track the first tap had just
+  started — so a tap on the row whose source was assigned within the last 400 ms is absorbed
+  instead of toggled. Both windows are a monotonic timestamp rather than the existing `switching`
+  flag, which a fixed 700 ms timer from an earlier load can clear underneath the current one.
+  Verified with real WAV sources: on the old build a second tap 60 ms after selecting a row left
+  it paused (and a third tap 150 ms later also paused it), on the new one the track keeps playing,
+  one `load()` runs per burst, and a deliberate later tap still pauses and resumes. 20/20 harness
+  checks pass, all 140 elements keep byte-identical geometry and computed style, and the frozen
+  render at 2x DPR is pixel-identical (0 of 1,507,920 pixels differ).
 - [ ] 18. Rotation/resize can leave the card mid-tilt; re-measure and reset the tilt target.
 
 ## Memory and battery

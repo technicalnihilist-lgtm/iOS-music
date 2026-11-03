@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 3.0 — a fast second tap can't stop the track it started
+
+- Tapping a playlist row twice in quick succession ran a second load for the track already on deck, which reloaded the source and queued a pause — so the row stopped the song it had just started; a repeat request for the current track is now a no-op and a repeat tap in the same burst is absorbed, while a deliberate later tap still pauses and resumes.
+
 ### 2.9 — a broken tilt reading can't freeze the depth
 
 - The gyroscope handler only rejected a `null` `beta`/`gamma`, so a reading that was not a number at all reached the tilt spring, and because `NaN` survives the smoothing the depth, glow and parallax stayed dead for the rest of the session even after the sensor recovered; both angles must now be finite, so a partial or broken event is ignored and the next real one still lands.

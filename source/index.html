@@ -223,6 +223,9 @@ let fails=0;           // consecutive tracks that refused to play
 const MAX_SKIP=3;      // how many consecutive unplayable tracks the skip chain may walk
 let stopped=false;     // the skip chain gave up and reported; a trailing play() rejection must not talk over it
 let swapToken=0;       // guards the delayed title swap against fast track skipping
+let loadSrc=null;      // the source assigned for the track on deck, so a repeat load is a no-op
+let loadAt=0;          // when that source was assigned (monotonic), for the rapid-repeat window
+const REPEAT_MS=400;   // a second tap inside this window belongs to the same burst, not a new intent
 
 /* A refused play() used to be swallowed by .catch(()=>{}), so a track the platform would not
    start looked exactly like a dead button. The rejection is now classified and surfaced
@@ -319,7 +322,20 @@ function load(i,autoplay,dir){
     EL.artist.textContent='Add songs from your phone';
     resetSeek();renderList();return;
   }
-  idx=(i+tracks.length)%tracks.length;
+  const n=(i+tracks.length)%tracks.length;
+  /* Idempotent while a source is still settling. A second request for the track already on deck
+     is a repeat tap, not a track change, and re-assigning `au.src` is destructive: the media
+     reloads, the position drops to 0, the swap animation replays and the pause the reload fires
+     leaves the transport showing "play" for a track that is starting. Only the settling window
+     last REPEAT_MS is treated as a repeat, so a deliberate reload - next on a one-track list, a
+     replay after `ended` - still swaps the source exactly as before. A timestamp rather than
+     `switching` because that flag is cleared by a fixed 700 ms timer which a previous load can
+     still be holding, and a stale timer must not decide whether this tap is a repeat. */
+  if(n===idx&&tracks[n].src&&loadSrc===tracks[n].src&&performance.now()-loadAt<REPEAT_MS){
+    if(autoplay&&au.paused)attemptPlay();
+    return;
+  }
+  idx=n;
   const t=tracks[idx];
   const ui=()=>{
     EL.title.textContent=t.t;EL.artist.textContent=t.a;
@@ -341,6 +357,7 @@ function load(i,autoplay,dir){
   try{
     if(!t.src)t.src=synth(t);
     au.src=t.src;
+    loadSrc=t.src;loadAt=performance.now();
   }catch(e){
     switching=false;
     EL.artist.textContent="Can't play this file";
@@ -756,7 +773,12 @@ $('list').onclick=e=>{
   const r=e.target.closest('.it');if(!r)return;
   if(r.dataset.add){$('file').click();return}
   const i=+r.dataset.i;
-  if(i===idx){au.paused?attemptPlay():au.pause();return}
+  if(i===idx){
+    /* this row's source was assigned a moment ago: a repeat tap in the same burst, not a request
+       to pause. Toggling here stopped the track the first tap had just started. */
+    if(performance.now()-loadAt<REPEAT_MS)return;
+    au.paused?attemptPlay():au.pause();return;
+  }
   load(i,true,i>idx?1:-1);
 };
 
