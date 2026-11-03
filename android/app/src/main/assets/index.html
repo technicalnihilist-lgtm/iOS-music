@@ -686,7 +686,13 @@ $('file').onchange=e=>{
     tracks.push({
       t:name,
       a:'My library',
-      h:Math.round((tracks.length*137.508)%360),   /* golden angle: hues stay spread out */
+      /* golden angle: hues stay spread out. The product is taken mod 360 to keep the angle in
+         [0,360), but rounding can land on exactly 360 on long lists (n = 610, 1220, 1830 ...),
+         which is hue 0 written as a value outside the 0-359 domain every other read site assumes
+         - the colour slider then reads back clamped to its max while the label reads "360 degrees".
+         Wrapping the rounded value keeps the stored hue in 0-359 and leaves the colour identical,
+         since hue 360 and hue 0 are the same angle. */
+      h:Math.round((tracks.length*137.508)%360)%360,
       src:URL.createObjectURL(f)
     });
   });
