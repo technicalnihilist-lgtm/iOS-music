@@ -669,7 +669,11 @@ applyS();
 /* own songs */
 $('addBtn').onclick=()=>$('file').click();
 $('file').onchange=e=>{
-  const fs=[...e.target.files];
+  /* A cancelled picker does not always deliver an empty FileList: the Android WebView reports a
+     back-out as `files === null`, and spreading that threw an uncaught TypeError every time the
+     user dismissed the picker. Read it defensively - nothing picked means nothing to do, and the
+     playlist, the current track and the seek bar are left exactly as they were. */
+  const fs=e.target.files?[...e.target.files]:[];
   e.target.value='';                       /* so picking the same file again still fires */
   if(!fs.length)return;
   const seen=new Set(tracks.map(t=>t.t+'|'+t.a));

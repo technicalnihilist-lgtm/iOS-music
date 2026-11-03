@@ -76,6 +76,9 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 2.6 — a cancelled picker is a no-op
+
+- Dismissing the system file picker without choosing anything could hand the page `files === null` (the Android WebView reports a back-out that way), and spreading it threw an uncaught `TypeError` on every dismissal; the handler now reads the list defensively, so a cancel in either shape leaves the playlist, the current track and the seek bar untouched.
 ### 2.5 — a run of bad files stops
 
 - The skip-unplayable path advanced through every remaining track while the failure count stayed below the playlist length, so a playlist full of unplayable files walked the whole list; the chain now stops after three consecutive failures, keeps the same on-screen message and reports the count through the off-screen status region.

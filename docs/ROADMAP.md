@@ -86,8 +86,16 @@ the symptom is. Do not add "refactor everything" style entries.
   Stopping also cancels the title swap still queued from the last attempt, which used to land
   ~360 ms later and replace the message with the track's artist, and a `stopped` flag keeps the
   trailing `play()` rejection from talking over it with the generic text.
-- [ ] 13. A cancelled or empty file-picker result should leave the playlist untouched (verify, and
-  fix if not).
+- [x] 13. A cancelled or empty file-picker result should leave the playlist untouched (verify, and
+  fix if not). *(2.6)* — verified first, and the playlist side was already sound: a cancel delivered as
+  an empty `FileList` and as `files === null` both left the rows, title, hue, seek bar and sheet state
+  identical, with no track added and no `load()`. The defect was the null shape — `[...e.target.files]`
+  threw an uncaught `TypeError` on every back-out from the system picker, which the WebView logs as a
+  JS error each time the user dismisses the chooser. The handler now reads
+  `e.target.files?[...e.target.files]:[]`, so a cancel is a no-op in both shapes; picking real files,
+  duplicate rejection and the multi-file add path are unchanged. 17/17 harness checks pass (cancel in
+  four states, null-files with no exception, pick, dedupe, track switch with row reuse, back chain,
+  hit-test flat and tilted) and all 116 elements keep byte-identical geometry and computed style.
 - [ ] 14. Track hues from the golden-angle step can exceed 359 on long lists; clamp to 0–359.
 - [ ] 15. `seek` input should be clamped to `[0, duration]` before assignment.
 - [ ] 16. `deviceorientation` can deliver null `beta`/`gamma`; the guard exists but confirm it also
