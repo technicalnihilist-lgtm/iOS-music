@@ -692,18 +692,26 @@ if(artBox){
   const canTilt=()=>!motionOff()&&!(S.motion==='auto'&&hasGyro);
   const tStart=e=>{if(!canTilt())return;touchTilt(e,measureTilt())};
   const tMove=e=>{if(!canTilt())return;touchTilt(e,tiltRect)};
-  const tEnd=()=>{
+  /* Drop the cached box and let the card spring back flat - the same settle a lifted finger
+     produces, unless the gyroscope is the thing aiming it. */
+  const relax=()=>{
     tiltRect=null;
     if(!(S.motion==='auto'&&hasGyro)){tg.x=0;tg.y=0;kick()}
   };
   const tDrop=()=>{tiltRect=null};
   artBox.addEventListener('touchstart',tStart,{passive:true});
   artBox.addEventListener('touchmove',tMove,{passive:true});
-  artBox.addEventListener('touchend',tEnd,{passive:true});
-  artBox.addEventListener('touchcancel',tEnd,{passive:true});
+  artBox.addEventListener('touchend',relax,{passive:true});
+  artBox.addEventListener('touchcancel',relax,{passive:true});
+  /* A rotation or resize moves the card's box out from under the finger. The cache was already
+     dropped so the next move re-measures, but the *target* tilt was left where the last move put
+     it, so the card held the pre-rotation angle with no finger on it whenever the gesture's end
+     never arrived - a resize that cancels an active touch does not always deliver touchend or
+     touchcancel. Reset the target as well, so a rotation always settles the card flat.
+     Scrolling only drops the cache: the finger is still down and the next move re-aims it. */
   window.addEventListener('scroll',tDrop,{passive:true,capture:true});
-  window.addEventListener('resize',tDrop,{passive:true});
-  window.addEventListener('orientationchange',tDrop,{passive:true});
+  window.addEventListener('resize',relax,{passive:true});
+  window.addEventListener('orientationchange',relax,{passive:true});
 }
 
 applyS();
