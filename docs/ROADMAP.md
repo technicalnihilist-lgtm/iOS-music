@@ -96,7 +96,19 @@ the symptom is. Do not add "refactor everything" style entries.
   duplicate rejection and the multi-file add path are unchanged. 17/17 harness checks pass (cancel in
   four states, null-files with no exception, pick, dedupe, track switch with row reuse, back chain,
   hit-test flat and tilted) and all 116 elements keep byte-identical geometry and computed style.
-- [ ] 14. Track hues from the golden-angle step can exceed 359 on long lists; clamp to 0–359.
+- [x] 14. Track hues from the golden-angle step can exceed 359 on long lists; clamp to 0–359.
+  *(2.7)* — the hue was `Math.round((tracks.length*137.508)%360)`, and rounding lands on exactly
+  360 for the 611th, 1221st and 1831st track added, so those three positions in a long list stored
+  a hue outside the 0–359 domain every read site assumes. Nothing looked wrong on the Now Playing
+  screen — hue 360 and hue 0 are the same angle, and `hsl(360 …)` resolves to the same colour — but
+  the colour-shift slider read back clamped to its end while the label beside it read "360°", and
+  the blob field's `hue-rotate` was handed 110deg instead of the equivalent −250deg. The rounded
+  value is now wrapped back into range. Verified on a 614-track list: every row's `--ah` matches its
+  golden-angle value and none exceeds 359 (the old build fails all four of those assertions and the
+  new one passes 32/32). The rendered result is unchanged, and provably so: the 360/0 and
+  −250/110 degree forms were compared through the canvas filter and are byte-identical, and the deep
+  state (611 tracks, current track at the wrap) fingerprints identically to the old build except for
+  the readout itself, which now says "0°".
 - [ ] 15. `seek` input should be clamped to `[0, duration]` before assignment.
 - [ ] 16. `deviceorientation` can deliver null `beta`/`gamma`; the guard exists but confirm it also
   handles the first event having only `alpha`.
