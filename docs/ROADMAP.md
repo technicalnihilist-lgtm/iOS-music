@@ -123,8 +123,18 @@ the symptom is. Do not add "refactor everything" style entries.
   produces 100%, and in-range positions still convert to exactly the time they did before (25% of
   200 s is still 50 s, and the readout still says 0:50). All 32 checks pass, all 106 elements keep
   byte-identical geometry and computed style, and the rendered page is pixel-identical.
-- [ ] 16. `deviceorientation` can deliver null `beta`/`gamma`; the guard exists but confirm it also
-  handles the first event having only `alpha`.
+- [x] 16. `deviceorientation` can deliver null `beta`/`gamma`; the guard exists but confirm it also
+  handles the first event having only `alpha`. *(2.9)* — confirmed first: an alpha-only event
+  (`beta`/`gamma` null) was already a no-op, and a valid event after it still drives the tilt. The
+  guard only tested `== null`, though, so a reading that is not a number at all walked straight
+  through: `NaN` reached `tg`, the spring copied it into `tv`, `paint()` wrote `NaN` into `--mx`,
+  `--my`, `--lx` and `--glow`, and because `NaN` survives the smoothing the depth and glow were
+  dead for the rest of the session — a later good reading could not bring them back. Both angles
+  must now be finite, so every partial or broken event is a no-op and the next real one lands.
+  Verified in the harness: the old build turns all four properties into `NaN` and never recovers,
+  the new one leaves them untouched and still follows a valid `beta`/`gamma`; 19/19 checks pass,
+  and all 116 elements keep byte-identical geometry and computed style with a pixel-identical
+  render.
 - [ ] 17. Rapid taps on a playlist row can call `load()` twice for the same track; make it
   idempotent.
 - [ ] 18. Rotation/resize can leave the card mid-tilt; re-measure and reset the tilt target.

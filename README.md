@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 2.9 — a broken tilt reading can't freeze the depth
+
+- The gyroscope handler only rejected a `null` `beta`/`gamma`, so a reading that was not a number at all reached the tilt spring, and because `NaN` survives the smoothing the depth, glow and parallax stayed dead for the rest of the session even after the sensor recovered; both angles must now be finite, so a partial or broken event is ignored and the next real one still lands.
+
 ### 2.8 — the seek bar stays inside the track
 
 - The bar was handed `currentTime / duration * 100` unchecked, so a stream running past its header duration (VBR MP3, some WAVs) pushed the fill past the end of the track and left the value the slider believed it held out of step with the value it actually held; the position and the time it converts to are now clamped to the track's own range.

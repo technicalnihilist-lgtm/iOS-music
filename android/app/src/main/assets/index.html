@@ -624,12 +624,22 @@ function tick(){
 }
 function kick(){if(!rafId)rafId=requestAnimationFrame(tick)}
 
-/* gyroscope: the source that makes the card feel physical */
+/* gyroscope: the source that makes the card feel physical.
+   A sensor event is not guaranteed to carry two usable angles. The first event on many devices
+   reports only `alpha` - beta and gamma are null - and a sensor that has lost calibration can
+   report a value that is not a number at all. The old guard only tested `== null`, so the first
+   shape was already a harmless no-op but the second walked straight through: NaN reached the
+   spring, tg and tv became NaN, paint() wrote "NaN" into --mx/--my/--lx/--glow, and the depth
+   and glow were dead for the rest of the session - even a later good reading could not recover
+   them, because NaN survives the smoothing. Requiring both angles to be finite makes every
+   partial or broken event a no-op, so the next real one still lands. */
 window.addEventListener('deviceorientation',e=>{
-  if(motionOff()||S.motion==='touch'||e.beta==null||e.gamma==null)return;
+  if(motionOff()||S.motion==='touch')return;
+  const b=e.beta,g=e.gamma;
+  if(!Number.isFinite(b)||!Number.isFinite(g))return;
   hasGyro=true;
-  tg.y=clamp((e.beta-52)/34,-1,1);
-  tg.x=clamp(e.gamma/34,-1,1);
+  tg.y=clamp((b-52)/34,-1,1);
+  tg.x=clamp(g/34,-1,1);
   kick();
 },{passive:true});
 
