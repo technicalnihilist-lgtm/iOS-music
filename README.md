@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 3.6 — the sliders say what they measure
+
+- Every range input announced a bare number — "250" — because its unit lived in a separate readout node; each one now carries an `aria-valuetext` written from the same place as the visible value, so the seek bar reads as a time, the blur slider in pixels, the colour shift in degrees and the rest in percent, with nothing on screen changing.
+
 ### 3.5 — a track change is announced
 
 - The title and artist were rewritten on every track change but nothing marked the block as a live region, so a screen reader said nothing when the song changed; it now carries `aria-live="polite"` with `aria-atomic="true"` and announces the new track once the swap has settled.
