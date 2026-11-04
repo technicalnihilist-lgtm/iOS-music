@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 3.3 — the depth loop sleeps with the page
+
+- The tilt spring kept requesting animation frames while the page was hidden, and the id it held for a frame the paused WebView never delivers made `kick()` decline to schedule another — so one backgrounding left the card unresponsive to the gyroscope and to touch for the rest of the session; the loop now cancels its frame and stops when the document is hidden and picks the spring back up on return, with the motion itself unchanged.
+
 ### 3.2 — object URLs are released on teardown
 
 - Nothing ever revoked the object URLs the file picker created, so every song added kept its whole audio blob resident for the life of the page; each URL the page creates is now recorded and revoked when the document is really going away, with a page restored from the back/forward cache left untouched so its sources stay valid.
