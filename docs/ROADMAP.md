@@ -210,7 +210,23 @@ the symptom is. Do not add "refactor everything" style entries.
 
 ## Accessibility
 
-- [ ] 22. Announce track changes with `aria-live="polite"` on the title block.
+Track changes were silent to a screen reader. `load()` rewrites `#title` and `#artist` on every
+switch, but the title block was an ordinary `<div>`: nothing about it told assistive tech that its
+text had changed, so a user driving the transport from a headset or a keyboard got the new song
+with no announcement at all — the off-screen `#live` status region only ever carries playback
+errors. The block now carries `aria-live="polite"` with `aria-atomic="true"`, so the title and
+artist are announced once, in reading order, as a single unit. The write happens inside `ui()`,
+which runs after the 360 ms art wipe rather than during it, so the announcement lands on the track
+that is actually on deck and never on a half-swapped title. Verified in the harness: the region
+resolves to `polite`/`true` and its text is the new track after a switch (both attributes absent on
+the old build); dedupe still holds at 2 → 2 tracks, playlist rows keep their node identity while
+the highlight moves, settings still persist, the back chain still returns `true, true, false`, and
+all twelve `elementFromPoint` hit-tests (six controls, flat and tilted) resolve to the control or
+a descendant. All 117 elements keep byte-identical geometry and computed style in a frozen
+snapshot of both builds, so nothing visible moved.
+- [x] 22. Announce track changes with `aria-live="polite"` on the title block. *(3.5)* — the
+  title block is a polite, atomic live region, so every track change is announced as "title, artist"
+  once the swap has settled.
 - [ ] 23. Give every range input an `aria-valuetext` describing its unit.
 - [ ] 24. Ensure keyboard focus is visible on buttons (currently only `:active` is styled).
 - [ ] 25. Give the playlist `role="list"` and its rows `role="listitem"`.

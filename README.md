@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 3.5 — a track change is announced
+
+- The title and artist were rewritten on every track change but nothing marked the block as a live region, so a screen reader said nothing when the song changed; it now carries `aria-live="polite"` with `aria-atomic="true"` and announces the new track once the swap has settled.
+
 ### 3.4 — the lock screen forgets a closed player
 
 - Nothing cleared the media session when the document went away, so backing out of the player left the last track in the notification and on the lock screen, with a play button bound to a WebView that no longer existed and a state that still said "playing"; the metadata, the playback state and the four action handlers are now cleared on the `pagehide` that really tears the page down, while a page entering the back/forward cache and a player collapsed to the bubble — both still playing — keep theirs.
