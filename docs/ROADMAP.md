@@ -176,8 +176,22 @@ the symptom is. Do not add "refactor everything" style entries.
   sources stay valid. Verified in the harness: after a real `pagehide` every track's blob URL stops
   resolving in the old build and resolves in neither the new one nor a restored page; 20/20 checks
   pass, and all 106 elements keep byte-identical geometry and computed style.
-- [ ] 20. The `requestAnimationFrame` loop should stop when the document is hidden and restart on
-  visibility.
+- [x] 20. The `requestAnimationFrame` loop should stop when the document is hidden and restart on
+  visibility. *(3.3)* — the depth spring's loop kept asking for a frame every time it ran, whether
+  or not anything could be seen, and it was left holding the id of a frame the WebView never
+  delivers: the Android shell pauses the WebView with the activity, so the queued callback never
+  runs, while `kick()` reads a non-null `rafId` as "a frame is already queued" and declines to
+  schedule another. One trip to the background therefore left the depth engine dead for the rest
+  of the session — no gyroscope, no finger tilt, no idle settle — until the page was reloaded. The
+  loop now cancels its frame and stops on `visibilitychange` to hidden, and on the way back picks
+  the spring up again if a target moved while it was stopped. Verified in the harness: on the old
+  build nine frames are requested while hidden and the loop never recovers after a dropped one
+  (`--mx` frozen at 0.3598 instead of the −0.3612 its target implies, and a later gesture no
+  longer tilts at all); on the new one zero frames are requested while hidden, one frame is
+  cancelled, the spring reaches its target on return and still tracks a fresh gesture afterwards
+  (18/18 checks, the four new ones failing on the old build). Nothing visible moves: the spring is
+  left exactly where the last delivered frame put it, and all 116 elements keep byte-identical
+  geometry and computed style in a frozen snapshot of both builds.
 - [ ] 21. Media session metadata is left behind when the player closes; clear it.
 
 ## Accessibility
