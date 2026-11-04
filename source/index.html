@@ -157,7 +157,7 @@ input[type=range]{touch-action:pan-y}
   </div>
   <div class="artwrap"><div class="art" id="art"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v11.6A3.5 3.5 0 1 0 11 18V8h6V3z"/></svg></div></div>
   <div class="meta" aria-live="polite" aria-atomic="true"><h2 id="title">—</h2><p id="artist">—</p></div>
-  <div class="seek"><input type="range" id="seek" min="0" max="100" step="0.1" value="0"><div class="times"><span id="cur">0:00</span><span id="dur">0:00</span></div></div>
+  <div class="seek"><input type="range" id="seek" min="0" max="100" step="0.1" value="0" aria-valuetext="0:00"><div class="times"><span id="cur">0:00</span><span id="dur">0:00</span></div></div>
   <div class="row">
     <button class="ctl" id="prev" aria-label="Previous"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
     <button class="ctl main pp" id="pp" aria-label="Play or pause"><svg class="pl" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg class="pa" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button>
@@ -175,16 +175,16 @@ input[type=range]{touch-action:pan-y}
   <h3>Settings</h3>
 
   <div class="sec">Glass</div>
-  <label class="opt"><span>Transparency <em id="glV">18%</em></span><input type="range" id="gl" min="2" max="50" value="18"></label>
-  <label class="opt"><span>Blur <em id="blV">28</em></span><input type="range" id="bl" min="0" max="60" value="28"></label>
-  <label class="opt"><span>Colour shift <em id="huV">250°</em></span><input type="range" id="hu" min="0" max="360" value="250"></label>
+  <label class="opt"><span>Transparency <em id="glV">18%</em></span><input type="range" id="gl" min="2" max="50" value="18" aria-valuetext="18%"></label>
+  <label class="opt"><span>Blur <em id="blV">28</em></span><input type="range" id="bl" min="0" max="60" value="28" aria-valuetext="28 pixels"></label>
+  <label class="opt"><span>Colour shift <em id="huV">250°</em></span><input type="range" id="hu" min="0" max="360" value="250" aria-valuetext="250 degrees"></label>
 
   <div class="sec">4D depth</div>
-  <label class="opt"><span>Depth <em id="dpV">60%</em></span><input type="range" id="dp" min="0" max="100" value="60"></label>
-  <label class="opt"><span>Tilt <em id="tlV">100%</em></span><input type="range" id="tl" min="0" max="150" value="100"></label>
-  <label class="opt"><span>Parallax <em id="prV">100%</em></span><input type="range" id="pr" min="0" max="200" value="100"></label>
-  <label class="opt"><span>Light <em id="gvV">100%</em></span><input type="range" id="gv" min="0" max="200" value="100"></label>
-  <label class="opt"><span>Shadow <em id="sdV">100%</em></span><input type="range" id="sd" min="0" max="200" value="100"></label>
+  <label class="opt"><span>Depth <em id="dpV">60%</em></span><input type="range" id="dp" min="0" max="100" value="60" aria-valuetext="60%"></label>
+  <label class="opt"><span>Tilt <em id="tlV">100%</em></span><input type="range" id="tl" min="0" max="150" value="100" aria-valuetext="100%"></label>
+  <label class="opt"><span>Parallax <em id="prV">100%</em></span><input type="range" id="pr" min="0" max="200" value="100" aria-valuetext="100%"></label>
+  <label class="opt"><span>Light <em id="gvV">100%</em></span><input type="range" id="gv" min="0" max="200" value="100" aria-valuetext="100%"></label>
+  <label class="opt"><span>Shadow <em id="sdV">100%</em></span><input type="range" id="sd" min="0" max="200" value="100" aria-valuetext="100%"></label>
 
   <div class="sec">Motion</div>
   <div class="seg" id="mot">
@@ -293,6 +293,15 @@ const fmt=s=>{
   s=Math.floor(s);
   return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 };
+/* Each slider's numeric readout is a separate <em> node, so the range input itself announced a
+   bare number ("250") with no unit. aria-valuetext carries the same reading, unit included, and is
+   written from the same places the visible readout is written so the two cannot disagree. The
+   attribute is not rendered, so nothing on screen moves. */
+const VT_UNIT={gl:'%',bl:' pixels',hu:' degrees',dp:'%',tl:'%',pr:'%',gv:'%',sd:'%'};
+const vtOf=(id,v)=>v+(VT_UNIT[id]||'');
+function setVT(el,txt){
+  if(el&&el.getAttribute('aria-valuetext')!==txt)el.setAttribute('aria-valuetext',txt);
+}
 /* Re-trigger a CSS animation. The engine has to *see* the class removed before it is
    added back, and a style flush is enough for that: reading a layout property such as
    offsetWidth also forces a synchronous layout, which this path does not need. */
@@ -329,6 +338,7 @@ function resetSeek(){
   const sk=EL.seek;
   sk.value=0;sk.style.setProperty('--p','0%');
   EL.cur.textContent='0:00';
+  setVT(sk,'0:00');
   EL.dur.textContent='--:--';
   tuCache.p=tuCache.v=tuCache.cur=tuCache.dur=null;
 }
@@ -358,7 +368,7 @@ function load(i,autoplay,dir){
     EL.title.textContent=t.t;EL.artist.textContent=t.a;
     EL.art.style.setProperty('--ah',t.h);
     document.documentElement.style.setProperty('--h',t.h);
-    EL.hu.value=t.h;EL.huV.textContent=t.h+'°';
+    EL.hu.value=t.h;EL.huV.textContent=t.h+'°';setVT(EL.hu,vtOf('hu',t.h));
     EL.hu.style.setProperty('--p',(t.h/360*100)+'%');
     renderList();
   };
@@ -445,7 +455,7 @@ au.ontimeupdate=()=>{
     const pv=Math.round(p*10)/10;      /* step="0.1": the input snaps to this either way */
     if(tuCache.v!==pv){tuCache.v=pv;sk.value=pv}
     const cs=fmt(au.currentTime);
-    if(tuCache.cur!==cs){tuCache.cur=cs;$('cur').textContent=cs}
+    if(tuCache.cur!==cs){tuCache.cur=cs;$('cur').textContent=cs;setVT(sk,cs)}
   }
   if(isFinite(d)&&d>0){
     const ds=fmt(d);
@@ -485,6 +495,7 @@ sk.oninput=e=>{
     if(isFinite(t))au.currentTime=t;
   }
   $('cur').textContent=fmt(au.currentTime);
+  setVT(e.target,fmt(au.currentTime));
 };
 ['pointerdown','touchstart'].forEach(ev=>sk.addEventListener(ev,()=>{dragging=true},{passive:true}));
 ['pointerup','pointercancel','touchend','touchcancel','blur'].forEach(ev=>sk.addEventListener(ev,()=>{dragging=false},{passive:true}));
@@ -625,6 +636,7 @@ function syncSlider(id,key,suf){
   el.value=S[key];
   el.style.setProperty('--p',((S[key]-el.min)/(el.max-el.min)*100)+'%');
   $(id+'V').textContent=S[key]+suf;
+  setVT(el,vtOf(id,S[key]));
 }
 SLIDERS.forEach(([id,key,suf])=>{
   const el=$(id);if(!el)return;
@@ -633,6 +645,7 @@ SLIDERS.forEach(([id,key,suf])=>{
     S[key]=+el.value;
     el.style.setProperty('--p',((el.value-el.min)/(el.max-el.min)*100)+'%');
     $(id+'V').textContent=el.value+suf;
+    setVT(el,vtOf(id,el.value));
     applyS();saveSSoon();
   };
 });
@@ -644,6 +657,7 @@ if(huEl){
     huEl.style.setProperty('--p',(huEl.value/360*100)+'%');
     root.setProperty('--h',huEl.value);
     $('huV').textContent=huEl.value+'°';
+    setVT(huEl,vtOf('hu',huEl.value));
   };
 }
 
