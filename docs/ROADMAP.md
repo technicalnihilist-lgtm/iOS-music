@@ -230,7 +230,11 @@ snapshot of both builds, so nothing visible moved.
 - [x] 23. Give every range input an `aria-valuetext` describing its unit. *(3.6)* — set from
   the same places the visible readout is written, so the two cannot drift apart; the blur slider
   reads in pixels and the colour shift in degrees, the rest in percent.
-- [ ] 24. Ensure keyboard focus is visible on buttons (currently only `:active` is styled).
+- [x] 24. Ensure keyboard focus is visible on buttons (currently only `:active` is styled). *(3.7)* — a
+  `:focus-visible` ring (2px `var(--tx)`, 3px offset, radius inherited; 6px on the seek bar) on
+  every button and range input. `:focus-visible` never matches a pointer or touch press, so the
+  on-device look is unchanged: all 232 nodes keep identical geometry and computed style, flat
+  and with the sheet open.
 - [ ] 25. Give the playlist `role="list"` and its rows `role="listitem"`.
 
 ## Code quality

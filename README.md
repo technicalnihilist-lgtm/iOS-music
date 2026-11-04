@@ -76,6 +76,13 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 3.7 — the buttons show where the focus is
+
+- Every control was styled for `:active` only, so moving through the player with a keyboard or a
+  switch device gave no indication of which button was selected; each button and range input now
+  draws a 2px ring on `:focus-visible` (a wider one around the seek bar, which had `outline:none`),
+  which never matches a pointer or touch press, so the on-device pixels are untouched.
+
 ### 3.6 — the sliders say what they measure
 
 - Every range input announced a bare number — "250" — because its unit lived in a separate readout node; each one now carries an `aria-valuetext` written from the same place as the visible value, so the seek bar reads as a time, the blur slider in pixels, the colour shift in degrees and the rest in percent, with nothing on screen changing.
