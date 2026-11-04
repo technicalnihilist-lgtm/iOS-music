@@ -648,15 +648,39 @@ if($('resetBtn'))$('resetBtn').onclick=()=>{
 const tv={x:0,y:0};            // smoothed tilt
 const tg={x:0,y:0};            // target tilt, -1..1
 let rafId=null,hasGyro=false;
+/* The spring is driven by requestAnimationFrame, and the loop used to keep asking for frames
+   while the page was hidden, where nothing it paints can be seen. Worse, it was left holding an
+   id for a frame the WebView never delivers: the Android shell pauses the WebView with the
+   activity, so the queued callback does not run, and `kick()` reads a non-null `rafId` as "a
+   frame is already queued" and declines to schedule another. One trip to the background
+   therefore left the depth engine dead for the rest of the session - the card no longer
+   responded to the gyroscope or to a finger until the page was reloaded. The loop now stops on
+   hide and restarts on show; `tv` is left exactly where the last delivered frame put it, so the
+   spring continues from the same point it would have continued from otherwise and the motion on
+   screen is unchanged. */
+let hiddenNow=!!document.hidden;
 const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+const springBusy=()=>Math.abs(tg.x-tv.x)>0.0015||Math.abs(tg.y-tv.y)>0.0015;
 
 function tick(){
+  if(hiddenNow){rafId=null;return}
   tv.x+=(tg.x-tv.x)*0.14;
   tv.y+=(tg.y-tv.y)*0.14;
   paint();
-  rafId=(Math.abs(tg.x-tv.x)>0.0015||Math.abs(tg.y-tv.y)>0.0015)?requestAnimationFrame(tick):null;
+  rafId=springBusy()?requestAnimationFrame(tick):null;
 }
-function kick(){if(!rafId)rafId=requestAnimationFrame(tick)}
+function kick(){if(!rafId&&!hiddenNow)rafId=requestAnimationFrame(tick)}
+/* Hidden: drop the queued frame so the id cannot outlive it. Visible: pick the spring back up if
+   a target moved while the loop was stopped - a settings change, a rotation settle or a sensor
+   reading that arrived in the background - and leave it alone when it had already come to rest. */
+document.addEventListener('visibilitychange',()=>{
+  hiddenNow=!!document.hidden;
+  if(hiddenNow){
+    if(rafId!==null){cancelAnimationFrame(rafId);rafId=null}
+  }else if(springBusy()){
+    kick();
+  }
+});
 
 /* gyroscope: the source that makes the card feel physical.
    A sensor event is not guaranteed to carry two usable angles. The first event on many devices
