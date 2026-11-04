@@ -227,7 +227,9 @@ snapshot of both builds, so nothing visible moved.
 - [x] 22. Announce track changes with `aria-live="polite"` on the title block. *(3.5)* — the
   title block is a polite, atomic live region, so every track change is announced as "title, artist"
   once the swap has settled.
-- [ ] 23. Give every range input an `aria-valuetext` describing its unit.
+- [x] 23. Give every range input an `aria-valuetext` describing its unit. *(3.6)* — set from
+  the same places the visible readout is written, so the two cannot drift apart; the blur slider
+  reads in pixels and the colour shift in degrees, the rest in percent.
 - [ ] 24. Ensure keyboard focus is visible on buttons (currently only `:active` is styled).
 - [ ] 25. Give the playlist `role="list"` and its rows `role="listitem"`.
 
