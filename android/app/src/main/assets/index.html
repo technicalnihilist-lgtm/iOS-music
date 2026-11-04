@@ -308,6 +308,20 @@ function setSession(t){
     navigator.mediaSession.playbackState=au.paused?'paused':'playing';
   }catch(e){}
 }
+/* The media session outlives the document that created it. Android keeps the notification and the
+   lock-screen controls it was handed until something replaces them, so a page torn down without
+   clearing them leaves the last track sitting on the lock screen - with a play button wired to a
+   WebView that no longer exists, and a state that says "playing" over silence. Clear it on a real
+   teardown only: a page going into the back/forward cache can come back with its audio intact, and
+   a player collapsed to the bubble is still playing, so both keep their session. */
+function clearSession(){
+  if(!('mediaSession' in navigator))return;
+  try{navigator.mediaSession.metadata=null}catch(e){}
+  try{navigator.mediaSession.playbackState='none'}catch(e){}
+  ['play','pause','nexttrack','previoustrack'].forEach(a=>{
+    try{navigator.mediaSession.setActionHandler(a,null)}catch(e){}
+  });
+}
 
 /* last values written by the timeupdate handler; reset whenever we write these nodes elsewhere */
 const tuCache={p:null,v:null,cur:null,dur:null};
@@ -561,7 +575,7 @@ function releaseUrls(){
   objUrls.forEach(u=>{try{URL.revokeObjectURL(u)}catch(e){}});
   objUrls.clear();
 }
-window.addEventListener('pagehide',e=>{if(!e.persisted)releaseUrls()});
+window.addEventListener('pagehide',e=>{if(!e.persisted){clearSession();releaseUrls()}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)flushS()});
 
 const REDUCED=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);

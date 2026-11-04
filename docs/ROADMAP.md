@@ -192,7 +192,21 @@ the symptom is. Do not add "refactor everything" style entries.
   (18/18 checks, the four new ones failing on the old build). Nothing visible moves: the spring is
   left exactly where the last delivered frame put it, and all 116 elements keep byte-identical
   geometry and computed style in a frozen snapshot of both builds.
-- [ ] 21. Media session metadata is left behind when the player closes; clear it.
+- [x] 21. Media session metadata is left behind when the player closes; clear it. *(3.4)* — the
+  session was set on every track change and never cleared, and a media session outlives the document
+  that created it: backing out of the player destroys the WebView, but Android keeps the notification
+  and the lock-screen controls it was handed, so the last track stayed on the lock screen with a play
+  button wired to a page that no longer exists and a state that still read "playing" over silence.
+  `clearSession()` now nulls the metadata, sets the playback state to `none` and unbinds the four
+  action handlers, on the `pagehide` that really tears the page down — the same condition that
+  releases the object URLs. Nothing else moves: a page entering the back/forward cache keeps its
+  session (it can come back playing) and so does a player collapsed to the bubble, which is still
+  playing. Verified in the harness with a recording media-session stub — after a teardown `pagehide`
+  the old build still holds the last track's metadata, `playing` and four live handlers, the new one
+  holds `null`, `none` and four nulls, while a `persisted` `pagehide` and the collapse to the bubble
+  leave both untouched; 29/29 checks pass (file picking, dedupe, row reuse, the back chain and the
+  `elementFromPoint` hit-test flat and tilted), all 117 elements keep byte-identical geometry and
+  computed style, and the frozen 2x render is pixel-identical.
 
 ## Accessibility
 

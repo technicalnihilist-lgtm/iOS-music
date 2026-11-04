@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 3.4 — the lock screen forgets a closed player
+
+- Nothing cleared the media session when the document went away, so backing out of the player left the last track in the notification and on the lock screen, with a play button bound to a WebView that no longer existed and a state that still said "playing"; the metadata, the playback state and the four action handlers are now cleared on the `pagehide` that really tears the page down, while a page entering the back/forward cache and a player collapsed to the bubble — both still playing — keep theirs.
+
 ### 3.3 — the depth loop sleeps with the page
 
 - The tilt spring kept requesting animation frames while the page was hidden, and the id it held for a frame the paused WebView never delivers made `kick()` decline to schedule another — so one backgrounding left the card unresponsive to the gyroscope and to touch for the rest of the session; the loop now cancels its frame and stops when the document is hidden and picks the spring back up on return, with the motion itself unchanged.
