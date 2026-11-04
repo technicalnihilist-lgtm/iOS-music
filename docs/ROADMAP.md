@@ -165,8 +165,17 @@ the symptom is. Do not add "refactor everything" style entries.
 
 ## Memory and battery
 
-- [ ] 19. Object URLs from the file picker are never revoked. Revoke a track's URL when the page is
-  torn down, and on `pagehide`.
+- [x] 19. Object URLs from the file picker are never revoked. Revoke a track's URL when the page is
+  torn down, and on `pagehide`. *(3.2)* — an object URL keeps its blob alive until it is revoked or
+  the document dies, so every file the picker handed over held its whole audio payload in memory
+  whether it was playing or not: adding twenty songs carried all twenty for the rest of the
+  session. Every URL the page creates now goes through one `mkUrl()` that records it in a set, and
+  a `pagehide` handler revokes them all and detaches the audio element first, since a URL the
+  element still holds is not released. A `pagehide` carrying `persisted` is a page entering the
+  back/forward cache, which can be restored with its state intact, so that case is skipped and its
+  sources stay valid. Verified in the harness: after a real `pagehide` every track's blob URL stops
+  resolving in the old build and resolves in neither the new one nor a restored page; 20/20 checks
+  pass, and all 106 elements keep byte-identical geometry and computed style.
 - [ ] 20. The `requestAnimationFrame` loop should stop when the document is hidden and restart on
   visibility.
 - [ ] 21. Media session metadata is left behind when the player closes; clear it.
