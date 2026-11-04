@@ -216,6 +216,9 @@ const EL={
 const au=$('au'),app=$('app'),sheet=$('sheet'),scrim=$('scrim'),bubble=$('bubble');
 const N={C4:261.6,D4:293.7,E4:329.6,F4:349.2,G4:392,A4:440,B4:493.9,C5:523.3,D5:587.3,E5:659.3};
 const tracks=[];
+/* Every object URL this page creates is owned here, so the blobs can be released on teardown. */
+const objUrls=new Set();
+const mkUrl=b=>{const u=URL.createObjectURL(b);objUrls.add(u);return u};
 let idx=0;
 let switching=false;   // a new source is loading: ignore the pause event it fires
 let dragging=false;    // the user is scrubbing the seek bar
@@ -282,7 +285,7 @@ function synth(t){
   w(0,'RIFF');d.setUint32(4,36+len*2,true);w(8,'WAVEfmt ');d.setUint32(16,16,true);d.setUint16(20,1,true);d.setUint16(22,1,true);
   d.setUint32(24,sr,true);d.setUint32(28,sr*2,true);d.setUint16(32,2,true);d.setUint16(34,16,true);w(36,'data');d.setUint32(40,len*2,true);
   new Int16Array(b,44).set(pcm);
-  return URL.createObjectURL(new Blob([b],{type:'audio/wav'}));
+  return mkUrl(new Blob([b],{type:'audio/wav'}));
 }
 
 const fmt=s=>{
@@ -545,6 +548,20 @@ function saveS(){try{localStorage.setItem('glass.settings.v1',JSON.stringify(S))
 function saveSSoon(){if(saveTimer)clearTimeout(saveTimer);saveTimer=setTimeout(writeS,200)}
 function flushS(){if(saveTimer){clearTimeout(saveTimer);writeS()}}
 window.addEventListener('pagehide',flushS);
+/* An object URL keeps its blob alive until it is revoked or the document dies, so every file the
+   picker handed over held its whole audio payload in memory whether it was playing or not: a
+   session that added twenty songs carried all twenty. Release them when the document really is
+   going away. `persisted` marks a page entering the back/forward cache, which can be restored with
+   this state intact, so its sources must stay valid - that case is skipped. The element is
+   detached before revoking: a URL the audio element still holds is not released, and a page that
+   reaches here is not coming back to play it. */
+function releaseUrls(){
+  if(!objUrls.size)return;
+  try{au.pause();au.removeAttribute('src');au.load()}catch(e){}
+  objUrls.forEach(u=>{try{URL.revokeObjectURL(u)}catch(e){}});
+  objUrls.clear();
+}
+window.addEventListener('pagehide',e=>{if(!e.persisted)releaseUrls()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)flushS()});
 
 const REDUCED=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -743,7 +760,7 @@ $('file').onchange=e=>{
          Wrapping the rounded value keeps the stored hue in 0-359 and leaves the colour identical,
          since hue 360 and hue 0 are the same angle. */
       h:Math.round((tracks.length*137.508)%360)%360,
-      src:URL.createObjectURL(f)
+      src:mkUrl(f)
     });
   });
   closeSheet();
