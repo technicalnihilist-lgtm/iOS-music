@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 3.2 — object URLs are released on teardown
+
+- Nothing ever revoked the object URLs the file picker created, so every song added kept its whole audio blob resident for the life of the page; each URL the page creates is now recorded and revoked when the document is really going away, with a page restored from the back/forward cache left untouched so its sources stay valid.
+
 ### 3.1 — a rotation can't leave the card stuck mid-tilt
 
 - `resize` and `orientationchange` dropped the cached artwork box but left the tilt target where the last `touchmove` put it, so a rotation that cancelled an active touch — and so never delivered the `touchend` that springs the card back — left the card holding the pre-rotation angle with no finger on it; both layout events now settle it flat, exactly as lifting the finger does, while scrolling still only drops the box and a gyro-driven tilt is left alone.
