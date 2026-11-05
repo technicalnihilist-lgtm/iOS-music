@@ -256,7 +256,16 @@ snapshot of both builds, so nothing visible moved.
 
 ## Android shell (`android/app/src/main/java/.../MainActivity.java`)
 
-- [ ] 29. Request and abandon audio focus so other apps duck correctly.
+- [x] 29. Request and abandon audio focus so other apps duck correctly. **Done.** The shell held no
+  focus at all, so a phone call, a notification or another player simply mixed with whatever was
+  coming out of the WebView. `AudioFocus.java` now holds `AUDIOFOCUS_GAIN` with media/music
+  attributes for exactly as long as the page is playing - the page reports play/pause through a
+  `GP.setPlaying()` bridge, because requesting on resume would silence other apps even with nothing
+  loaded - and gives it back on pause, on teardown, and on a permanent or transient loss, which also
+  pauses the page through its own transport button so the visible state stays in step. A duck
+  request is left alone: a WebView has no per-stream volume, and moving the element's volume would
+  desync the page's own slider. No layout, colour, type, copy or animation changed.
+
 - [ ] 30. Handle `onTrimMemory` by releasing the WebView's cache.
 - [ ] 31. Guard against a WebView that fails to instantiate, with a plain-text fallback screen.
 - [ ] 32. Confirm the file chooser returns `null` cleanly when the user backs out.

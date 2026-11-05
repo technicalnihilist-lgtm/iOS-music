@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 4.2 — audio focus follows playback
+
+- The Android shell never asked for audio focus, so a call, a notification or a second player talked over the song; it now takes focus when the page starts playing, hands it back when it stops or when another app claims it, and pauses the track instead of playing through - no visible change.
+
 ### 4.1 — one source for the "cannot play" copy
 
 - The "Can't play this file" line was typed out at four call sites in the audio path, so the artist text and the status message could drift apart and a wording fix meant finding every copy; it and the playback-blocked message are now two constants behind one `playError(n)` helper, with the same copy, the same visible result and nothing on screen changed.

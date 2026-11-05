@@ -1,12 +1,15 @@
 package com.glassplayer.app;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -19,6 +22,7 @@ public class MainActivity extends Activity {
 
     private WebView web;
     private ValueCallback<Uri[]> pendingFileCallback;
+    private AudioFocus focus;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,6 +83,19 @@ public class MainActivity extends Activity {
 
         web.setWebViewClient(new WebViewClient());
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
+
+        /* Audio focus follows real playback, not the activity lifecycle: the page calls
+           GP.setPlaying() from its own play/pause handlers, so other apps are only interrupted
+           when something is actually coming out of the speaker. */
+        focus = new AudioFocus((AudioManager) getSystemService(Context.AUDIO_SERVICE),
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        pausePlayback();
+                    }
+                });
+        web.addJavascriptInterface(new FocusBridge(), "GP");
+
         web.loadUrl("file:///android_asset/index.html");
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -111,6 +128,28 @@ public class MainActivity extends Activity {
             return;
         }
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    /** Receives the page's play/pause state. Called off the UI thread, so hop back to it. */
+    private final class FocusBridge {
+        @JavascriptInterface
+        public void setPlaying(final boolean playing) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (focus != null) focus.onPlaybackState(playing);
+                }
+            });
+        }
+    }
+
+    /** Pause through the page's own transport button, so its state and artwork stay in sync. */
+    private void pausePlayback() {
+        if (web == null) return;
+        web.evaluateJavascript(
+                "(function(){try{var a=document.getElementById('au');"
+                        + "if(a&&!a.paused){document.getElementById('pp').click()}}catch(e){}})()",
+                null);
     }
 
     /**
@@ -158,6 +197,7 @@ public class MainActivity extends Activity {
             pendingFileCallback.onReceiveValue(null);
             pendingFileCallback = null;
         }
+        if (focus != null) focus.abandon();
         if (web != null) {
             web.loadUrl("about:blank");
             web.destroy();
