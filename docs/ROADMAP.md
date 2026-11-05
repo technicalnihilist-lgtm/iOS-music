@@ -243,8 +243,14 @@ snapshot of both builds, so nothing visible moved.
 
 ## Code quality
 
-- [ ] 26. `synth()` builds a WAV for demo tracks that no real code path uses; confirm it is
-  unreachable and remove it, or document why it stays.
+- [x] 26. `synth()` builds a WAV for demo tracks that no real code path uses; confirm it is
+  unreachable and remove it, or document why it stays. **Done — removed.** The only caller was
+  `if(!t.src)t.src=synth(t)` in `load()`, and the only writer of `src` is the file-picker handler,
+  which sets `src:mkUrl(f)` on every track it pushes; `tracks` starts empty, so no track can reach
+  `load()` without a source, and nothing anywhere defines the `beat`/`n` fields `synth()` reads.
+  The function and its call site are gone (892 bytes); `load()` now assigns `au.src=t.src` inside
+  the same `try`, so an unreadable source still reports "Can't play this file" exactly as before.
+  Behaviour and hit-test harnesses pass unchanged.
 - [ ] 27. Add a short architecture comment at the top of the script (state, render, audio, depth).
 - [ ] 28. Unify the error strings ("Can't play this file", "Skipping…") into one helper.
 
