@@ -271,6 +271,16 @@ function setBlocked(v,msg){
   if(blocked!==v){blocked=v;app.dataset.blocked=v?'1':'0'}
   announce(msg||'');                          /* clearing the text on recovery leaves nothing stale */
 }
+/* One source for the "cannot play" copy. It used to be typed out at four call sites, so the
+   artist line and the status message could drift apart, and a fix to the wording meant finding
+   every copy. n>0 is the skip chain giving up after n failures: same visible line, a status
+   message that names the count. The copy itself is unchanged. */
+const ERR_PLAY="Can't play this file";
+const ERR_BLOCKED='Playback blocked. Tap play to start.';
+function playError(n){
+  EL.artist.textContent=ERR_PLAY;
+  if(n)setBlocked(true,(n>1?'Stopped after '+n+' unplayable tracks. ':'')+ERR_PLAY+'.');
+}
 function playRefused(err){
   const denied=!!err&&(err.name==='NotAllowedError'||err.name==='SecurityError');
   switching=false;
@@ -281,7 +291,7 @@ function playRefused(err){
   /* the skip chain already said why it stopped; the rejection that follows the same bad source
      would replace that message with the generic one, so leave it alone */
   if(stopped&&!denied)return;
-  setBlocked(true,denied?'Playback blocked. Tap play to start.':"Can't play this file.");
+  setBlocked(true,denied?ERR_BLOCKED:ERR_PLAY);
 }
 function attemptPlay(onOk){
   stopped=false;               /* any fresh attempt gets a fresh budget of announcements */
@@ -389,7 +399,7 @@ function load(i,autoplay,dir){
     loadSrc=t.src;loadAt=performance.now();
   }catch(e){
     switching=false;
-    EL.artist.textContent="Can't play this file";
+    playError(0);
     return;
   }
   if(autoplay){
@@ -439,8 +449,7 @@ au.onerror=()=>{
     stopped=true;
     swapToken++;                 /* cancel a title swap still queued from the last attempt, or it lands after this message and replaces it */
     app.classList.remove('playing');
-    $('artist').textContent="Can't play this file";
-    setBlocked(true,n>1?'Stopped after '+n+" unplayable tracks. Can't play this file.":"Can't play this file.");
+    playError(n);
   }
 };
 

@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 4.1 — one source for the "cannot play" copy
+
+- The "Can't play this file" line was typed out at four call sites in the audio path, so the artist text and the status message could drift apart and a wording fix meant finding every copy; it and the playback-blocked message are now two constants behind one `playError(n)` helper, with the same copy, the same visible result and nothing on screen changed.
+
 ### 4.0 — the script explains itself
 
 - The page opens with a four-layer architecture comment (state, render, audio, depth) naming the functions each layer owns, so the next change lands in the right place; it is a JS comment and renders nothing.
