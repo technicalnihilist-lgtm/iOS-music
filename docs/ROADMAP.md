@@ -251,7 +251,7 @@ snapshot of both builds, so nothing visible moved.
   The function and its call site are gone (892 bytes); `load()` now assigns `au.src=t.src` inside
   the same `try`, so an unreadable source still reports "Can't play this file" exactly as before.
   Behaviour and hit-test harnesses pass unchanged.
-- [ ] 27. Add a short architecture comment at the top of the script (state, render, audio, depth).
+- [x] 27. Add a short architecture comment at the top of the script (state, render, audio, depth).
 - [ ] 28. Unify the error strings ("Can't play this file", "Skipping…") into one helper.
 
 ## Android shell (`android/app/src/main/java/.../MainActivity.java`)

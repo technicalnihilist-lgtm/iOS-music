@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 4.0 — the script explains itself
+
+- The page opens with a four-layer architecture comment (state, render, audio, depth) naming the functions each layer owns, so the next change lands in the right place; it is a JS comment and renders nothing.
+
 ### 3.9 — dead code for demo tracks is gone
 
 - `synth()`, a WAV generator left over from the demo tracks, was still shipped although no code path could reach it (every track gets its source from the file picker); it and its only call site are removed, which changes nothing on screen.

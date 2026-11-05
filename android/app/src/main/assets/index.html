@@ -211,6 +211,21 @@ input[type=range]{touch-action:pan-y}
 <div class="sr" id="live" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script>
+/* Glass Player - one page, no framework and no build step. Four layers, read top to bottom:
+
+   state   `tracks` (the picked files), `idx`, the persisted settings object `S`, and a handful of
+           flags that describe the moment - `switching`, `dragging`, `fails`, `blocked`, `stopped`.
+           Everything else on the page is derived from these; nothing here is duplicated elsewhere.
+   render  `load()` writes the now-playing block, `renderList()` moves the playlist highlight and
+           only rebuilds rows when the set of files actually changed, and `resetSeek()` keeps the
+           last values written by timeupdate in one place so a stale write cannot fight a newer one.
+   audio   the single `<audio id="au">`. `load()` swaps its source, `attemptPlay()` classifies a
+           refused play() rather than swallowing it, and the transport buttons, the skip chain and
+           the mediaSession metadata all go through those two functions.
+   depth   the 4D card. A spring on requestAnimationFrame (`tick`, parked by `kick` whenever it is
+           at rest or the page is hidden) is fed by the gyroscope, mouse and touch handlers, and
+           `paint()` writes the result out as CSS custom properties.
+*/
 const $=id=>document.getElementById(id);
 /* Every node load() and resetSeek() touch, resolved once at startup instead of on
    each call. Nothing replaces these elements, so the references stay valid. */
