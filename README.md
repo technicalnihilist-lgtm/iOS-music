@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 3.8 — the playlist is a list
+
+- The playlist was a stack of `div`s with no roles, so a screen reader read the rows as loose text with no item count; the container now carries `role="list"` and both row templates — the track rows and the empty "no songs yet" row — carry `role="listitem"`, which changes nothing on screen.
+
 ### 3.7 — the buttons show where the focus is
 
 - Every control was styled for `:active` only, so moving through the player with a keyboard or a

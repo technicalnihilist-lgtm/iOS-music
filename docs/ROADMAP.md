@@ -235,7 +235,11 @@ snapshot of both builds, so nothing visible moved.
   every button and range input. `:focus-visible` never matches a pointer or touch press, so the
   on-device look is unchanged: all 232 nodes keep identical geometry and computed style, flat
   and with the sheet open.
-- [ ] 25. Give the playlist `role="list"` and its rows `role="listitem"`.
+- [x] 25. Give the playlist `role="list"` and its rows `role="listitem"`. *(3.8)* — the
+  container is a list and both row templates (a track row and the empty "no songs yet" row) are
+  list items, so a screen reader announces the playlist as a list and counts its rows. `role`
+  carries no presentation, the stylesheet matches no `[role]` selector, and all 117 elements keep
+  identical geometry, so nothing visible moved.
 
 ## Code quality
 

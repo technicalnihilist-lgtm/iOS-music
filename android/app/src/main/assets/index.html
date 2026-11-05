@@ -169,7 +169,7 @@ input[type=range]{touch-action:pan-y}
     <button class="ctl" id="next" aria-label="Next"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5l11 7L4 19z"/></svg></button>
   </div>
 <div class="lh">Playlist</div>
-  <div class="list" id="list"></div>
+  <div class="list" id="list" role="list"></div>
 </main></div></div>
 
 <div class="bubble glass" id="bubble" aria-label="Open player"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v11.6A3.5 3.5 0 1 0 11 18V8h6V3z"/></svg></div>
@@ -834,14 +834,14 @@ function renderList(rebuild){
   const list=$('list');
   if(!tracks.length){
     if(rebuild||listCount!==0){
-      list.innerHTML='<div class="it" data-add="1"><div class="tt"><b>No songs yet</b><small>Tap here to add songs</small></div></div>';
+      list.innerHTML='<div class="it" role="listitem" data-add="1"><div class="tt"><b>No songs yet</b><small>Tap here to add songs</small></div></div>';
       listCount=0;
     }
     return;
   }
   /* rebuild only when the set of songs changed; a track change just moves the highlight */
   if(rebuild||listCount!==tracks.length||list.children.length!==tracks.length){
-    list.innerHTML=tracks.map((t,i)=>`<div class="it${i===idx?' cur':''}" data-i="${i}"><div class="th" style="--ah:${t.h}"></div><div class="tt"><b>${esc(t.t)}</b><small>${esc(t.a)}</small></div><div class="eq"><i></i><i></i><i></i></div></div>`).join('');
+    list.innerHTML=tracks.map((t,i)=>`<div class="it${i===idx?' cur':''}" role="listitem" data-i="${i}"><div class="th" style="--ah:${t.h}"></div><div class="tt"><b>${esc(t.t)}</b><small>${esc(t.a)}</small></div><div class="eq"><i></i><i></i><i></i></div></div>`).join('');
     listCount=tracks.length;
     return;
   }
