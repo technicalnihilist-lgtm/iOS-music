@@ -1,6 +1,7 @@
 package com.glassplayer.app;
 
 import android.app.Activity;
+import android.content.ComponentCallbacks2;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
@@ -8,6 +9,7 @@ import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
 import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
@@ -21,6 +23,7 @@ public class MainActivity extends Activity {
     private static final int REQ_PICK_AUDIO = 1001;
 
     private WebView web;
+    private boolean webDestroyed;
     private ValueCallback<Uri[]> pendingFileCallback;
     private AudioFocus focus;
 
@@ -179,6 +182,40 @@ public class MainActivity extends Activity {
                 });
     }
 
+    /**
+     * The system tells us it is short of memory. The page is a single local asset with no
+     * network traffic, so the WebView's cache holds nothing worth keeping and is the cheapest
+     * thing to give back: dropping it frees the decoded resource cache without touching DOM
+     * storage, the loaded page, the playlist or the audio element, so nothing the listener can
+     * see changes. Only levels at or above RUNNING_LOW are acted on, which covers the hidden
+     * and background callbacks an activity actually receives as well as genuine pressure.
+     */
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        if (level < ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) return;
+        releaseWebCache();
+    }
+
+    /** Clear the WebView cache, on the UI thread, without ever touching a destroyed view. */
+    private void releaseWebCache() {
+        if (web == null || webDestroyed) return;
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            web.post(new Runnable() {
+                @Override
+                public void run() {
+                    releaseWebCache();
+                }
+            });
+            return;
+        }
+        try {
+            web.clearCache(true);
+        } catch (Exception ignored) {
+            // A WebView torn down underneath us must not take the process with it.
+        }
+    }
+
     @Override
     protected void onPause() {
         super.onPause();
@@ -199,6 +236,7 @@ public class MainActivity extends Activity {
         }
         if (focus != null) focus.abandon();
         if (web != null) {
+            webDestroyed = true;
             web.loadUrl("about:blank");
             web.destroy();
         }

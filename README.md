@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 4.3 — memory pressure gives the cache back
+
+- The shell ignored the system's low-memory callbacks, so the WebView's decoded-resource cache was still resident when Android started reclaiming; `onTrimMemory` now clears that cache at `RUNNING_LOW` and above, guarded against a destroyed view and off-thread calls, and touches nothing the listener can see.
+
 ### 4.2 — audio focus follows playback
 
 - The Android shell never asked for audio focus, so a call, a notification or a second player talked over the song; it now takes focus when the page starts playing, hands it back when it stops or when another app claims it, and pauses the track instead of playing through - no visible change.

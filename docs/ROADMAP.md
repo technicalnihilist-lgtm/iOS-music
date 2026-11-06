@@ -266,6 +266,13 @@ snapshot of both builds, so nothing visible moved.
   request is left alone: a WebView has no per-stream volume, and moving the element's volume would
   desync the page's own slider. No layout, colour, type, copy or animation changed.
 
-- [ ] 30. Handle `onTrimMemory` by releasing the WebView's cache.
+- [x] 30. Handle `onTrimMemory` by releasing the WebView's cache. **Done.** The shell ignored
+  `ComponentCallbacks2` entirely, so under pressure the system killed the process while a cache
+  of decoded resources sat unused. `MainActivity.onTrimMemory()` now clears the WebView cache at
+  `TRIM_MEMORY_RUNNING_LOW` and above - the levels an activity actually receives, including
+  `UI_HIDDEN` and `BACKGROUND` - through a `releaseWebCache()` helper that hops to the UI thread if
+  it is called off it, no-ops once the view has been destroyed, and swallows a throw from a WebView
+  torn down mid-call. It clears only the cache: DOM storage, the loaded page, the playlist and the
+  audio element are untouched, so playback, settings and every pixel stay exactly as they were.
 - [ ] 31. Guard against a WebView that fails to instantiate, with a plain-text fallback screen.
 - [ ] 32. Confirm the file chooser returns `null` cleanly when the user backs out.
