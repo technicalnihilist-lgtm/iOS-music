@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 4.4 — a missing WebView shows a message, not a crash
+
+- The shell assumed the WebView always inflates and dereferenced it straight away, so a device with Android System WebView missing, disabled or mid-update died in `onCreate`; the layout is now inflated defensively and a null or failed view shows a plain-text screen naming the fix - the normal interface is untouched.
+
 ### 4.3 — memory pressure gives the cache back
 
 - The shell ignored the system's low-memory callbacks, so the WebView's decoded-resource cache was still resident when Android started reclaiming; `onTrimMemory` now clears that cache at `RUNNING_LOW` and above, guarded against a destroyed view and off-thread calls, and touches nothing the listener can see.

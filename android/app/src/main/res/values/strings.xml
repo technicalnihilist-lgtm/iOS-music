@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Glass Player</string>
+    <string name="webview_unavailable">Glass Player can\'t start because Android System WebView is missing, disabled or still updating on this device.\n\nOpen Settings, then Apps, enable or update Android System WebView (or Chrome), and open Glass Player again.</string>
 </resources>

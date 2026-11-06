@@ -274,5 +274,14 @@ snapshot of both builds, so nothing visible moved.
   it is called off it, no-ops once the view has been destroyed, and swallows a throw from a WebView
   torn down mid-call. It clears only the cache: DOM storage, the loaded page, the playlist and the
   audio element are untouched, so playback, settings and every pixel stay exactly as they were.
-- [ ] 31. Guard against a WebView that fails to instantiate, with a plain-text fallback screen.
+- [x] 31. Guard against a WebView that fails to instantiate, with a plain-text fallback screen.
+  **Done.** `onCreate` inflated the layout and dereferenced `web` on the next line, so a device
+  where Android System WebView is missing, disabled or mid-update threw out of `setContentView`
+  (or came back with a null field) and the process died before anything was drawn. Inflation and
+  the `findViewById` now sit in one `try`, the field is null-checked once, and either failure
+  routes to `showWebViewFallback()`: a `TextView` on the same `#0b0b1a` background, built in code
+  so it needs no second layout, naming the component to enable and then reopening the app. Every
+  other `web.` call site already sat behind its own null check, so nothing else moved; the
+  fallback is only reachable when the page could not have loaded anyway, and no pixel of the
+  normal interface changed.
 - [ ] 32. Confirm the file chooser returns `null` cleanly when the user backs out.

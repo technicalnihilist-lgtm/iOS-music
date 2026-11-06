@@ -10,13 +10,18 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+import android.widget.TextView;
 
 public class MainActivity extends Activity {
 
@@ -30,9 +35,22 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
 
-        web = findViewById(R.id.web);
+        /* The WebView is the whole app, and it is not guaranteed to exist: on a device where the
+           system WebView package is missing, disabled or still updating, inflating the layout
+           throws and the field comes back null. Either way the page cannot run, so show a plain
+           text screen that says what to fix instead of letting the process die in onCreate. */
+        try {
+            setContentView(R.layout.activity_main);
+            web = findViewById(R.id.web);
+        } catch (Throwable t) {
+            web = null;
+        }
+        if (web == null) {
+            showWebViewFallback();
+            return;
+        }
+
         web.setBackgroundColor(Color.parseColor("#0b0b1a"));
 
         WebSettings s = web.getSettings();
@@ -131,6 +149,37 @@ public class MainActivity extends Activity {
             return;
         }
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    /**
+     * Shown only when no WebView could be created, so the normal interface is untouched. Plain
+     * text on the same background, built in code so it needs no layout of its own; nothing here
+     * is scripted, animated or interactive.
+     */
+    private void showWebViewFallback() {
+        int bg = Color.parseColor("#0b0b1a");
+
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(bg);
+
+        TextView message = new TextView(this);
+        message.setText(R.string.webview_unavailable);
+        message.setTextColor(Color.parseColor("#e8e8f0"));
+        message.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        message.setLineSpacing(0f, 1.35f);
+        message.setGravity(Gravity.CENTER_VERTICAL);
+        int pad = Math.round(24 * getResources().getDisplayMetrics().density);
+        message.setPadding(pad, pad, pad, pad);
+
+        root.addView(message, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        setContentView(root);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().setStatusBarColor(bg);
+            getWindow().setNavigationBarColor(bg);
+        }
     }
 
     /** Receives the page's play/pause state. Called off the UI thread, so hop back to it. */
