@@ -325,11 +325,18 @@ snapshot of both builds, so nothing visible moved.
   style and box geometry of all 118 nodes against the previous page: identical. 13/13 harness
   checks pass (pick, dedupe, track switch with row reuse, settings persistence, back chain,
   hit-test flat and tilted).
-- [ ] 34. The seek bar has no accessible name.
+- [x] 34. The seek bar has no accessible name.
   **Symptom.** `#seek` carries an `aria-valuetext` but no `aria-label` and no `<label>` of its own,
   so the accessibility tree exposes a nameless slider: TalkBack announces "slider, 1:23" with no
   indication that it is the playback position, while every settings slider gets its name from the
-  `<label class="opt">` it sits in.
+  `<label class="opt">` it sits in. *(4.7)* — `#seek` now carries `aria-label="Playback position"`;
+  verified through the browser's accessibility tree (`Accessibility.getPartialAXTree`), which
+  reported `{role:"slider", name:""}` before and `{role:"slider", name:"Playback position"}` after,
+  with every other player control still named. Nothing visible changed: with animations frozen and
+  `--mx`/`--my` pinned, the computed style and box geometry of all 117 nodes are byte-identical to
+  the previous page, and 15/15 harness checks pass (pick, dedupe, duplicate within one pick, track
+  switch with row reuse, back chain, settings persistence, hit-test flat and tilted, accessible
+  names).
 - [ ] 35. The collapsed player bubble is not exposed as a control.
   **Symptom.** `#bubble` is a plain `div` with an `aria-label`, and `aria-label` on a generic
   element with no role is ignored, so once the player is closed the only way to reopen it is an

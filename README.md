@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 4.7 — the seek bar says what it is
+
+- `#seek` had an `aria-valuetext` but no name, so the accessibility tree exposed a nameless slider and TalkBack announced "slider, 1:23" with no indication it was the playback position; it now carries `aria-label="Playback position"` and nothing visible changed.
+
 ### 4.6 — a stored setting is only trusted inside its range
 
 - A saved settings blob was applied to the page unchecked, so one out-of-domain value (a string, a null, a negative blur) reached the CSS as `NaN` or an impossible length and the card painted with no background and no backdrop blur, with readouts like `abc%`, until the slider that owned that value was dragged; each key is now accepted only in the shape its own control produces and anything else keeps the default, and a valid saved session restores exactly as before.
