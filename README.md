@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 4.5 — a cancelled chooser returns nothing, cleanly
+
+- Verified end to end that backing out of the system file picker hands the page nothing at all: the shell passes `null` once and clears the pending callback, the page treats `files === null` and an empty `FileList` alike, and the playlist, track, seek bar and sheet stay exactly as they were - so no code changed and the interface is byte-identical.
+
 ### 4.4 — a missing WebView shows a message, not a crash
 
 - The shell assumed the WebView always inflates and dereferenced it straight away, so a device with Android System WebView missing, disabled or mid-update died in `onCreate`; the layout is now inflated defensively and a null or failed view shows a plain-text screen naming the fix - the normal interface is untouched.

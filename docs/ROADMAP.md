@@ -284,4 +284,19 @@ snapshot of both builds, so nothing visible moved.
   other `web.` call site already sat behind its own null check, so nothing else moved; the
   fallback is only reachable when the page could not have loaded anyway, and no pixel of the
   normal interface changed.
-- [ ] 32. Confirm the file chooser returns `null` cleanly when the user backs out.
+- [x] 32. Confirm the file chooser returns `null` cleanly when the user backs out.
+  **Confirmed.** Both halves of the path were checked, and neither needed a change. In the shell,
+  `onActivityResult` builds a result only when `resultCode == RESULT_OK` and the intent is
+  non-null, so a back-out leaves `results` at `null`, hands exactly that to `onReceiveValue(...)`
+  once and clears `pendingFileCallback` in the same breath; a result arriving with no callback
+  pending (the activity was recreated while the chooser was up) falls through to
+  `super.onActivityResult` instead of dereferencing it, and `onDestroy` already answers a
+  still-pending callback with `null` before the WebView is torn down. In the page the handler
+  reads `e.target.files?[...e.target.files]:[]`, so both shapes a WebView can deliver - `files
+  === null` and an empty `FileList` - are the same no-op. Verified in the harness with the
+  back-out delivered in four states (no songs yet, and with a three-track playlist, in each
+  shape): the track list, index, title, artist, seek value and fill, duration, row count and
+  sheet state were identical before and after, with no `error` or `unhandledrejection` event.
+  19/19 harness checks pass (pick, dedupe, track switch with row reuse, back chain, settings
+  persistence, hit-test flat and tilted) and the page itself is unchanged, so the interface is
+  identical by construction.
