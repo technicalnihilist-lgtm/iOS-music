@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 4.6 — a stored setting is only trusted inside its range
+
+- A saved settings blob was applied to the page unchecked, so one out-of-domain value (a string, a null, a negative blur) reached the CSS as `NaN` or an impossible length and the card painted with no background and no backdrop blur, with readouts like `abc%`, until the slider that owned that value was dragged; each key is now accepted only in the shape its own control produces and anything else keeps the default, and a valid saved session restores exactly as before.
+
 ### 4.5 — a cancelled chooser returns nothing, cleanly
 
 - Verified end to end that backing out of the system file picker hands the page nothing at all: the shell passes `null` once and clears the pending callback, the page treats `files === null` and an empty `FileList` alike, and the playlist, track, seek bar and sheet stay exactly as they were - so no code changed and the interface is byte-identical.

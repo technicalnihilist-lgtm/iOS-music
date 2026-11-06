@@ -300,3 +300,37 @@ snapshot of both builds, so nothing visible moved.
   19/19 harness checks pass (pick, dedupe, track switch with row reuse, back chain, settings
   persistence, hit-test flat and tilted) and the page itself is unchanged, so the interface is
   identical by construction.
+
+## Robustness and accessibility
+
+- [x] 33. A settings blob read back from storage is applied without checking it against the
+  controls that produced it, so one bad value blanks the glass.
+  **Symptom.** Restoring `glass.settings.v1` copied every key straight into `S`. A `glass` of
+  `"abc"` reached `--glass` as `NaN`, which makes `background:rgba(255,255,255,var(--glass))`
+  invalid, so the card painted with `background-color:rgba(0,0,0,0)` and `backdrop-filter:none` -
+  no glass and no blur at all - while a null depth and a negative blur did the same to `--tiltk`
+  and `--blur`, a parallax of `1e9` threw the layers off the card, the readouts printed `abc%` and
+  `null%`, and the Motion segment showed no mode selected. Dragging the glass slider back repaired
+  only `--glass`: nothing re-reads `S` after load, so every other damaged value survived the
+  session.
+  **Fixed.** Each key is now accepted only in the shape its own control produces - a finite number
+  inside that slider's own `min`/`max`, `0`/`1` for the drift switch, one of the three motion
+  modes - and anything else keeps the default, which is the only value guaranteed to work. The
+  page is unchanged in every other respect: a value this page could have written is kept exactly
+  as stored, so an ordinary session restores precisely what it saved. Verified by loading the page
+  with a corrupt blob (every property back to its default, `background-color:
+  rgba(255,255,255,0.18)`, `backdrop-filter:blur(28px) saturate(1.9)`, readouts `18%|28|60%|100%|
+  100%|100%|100%`, Motion on Auto, drift on) and with a valid blob (all eight values restored
+  exactly, `--glass:0.3`, `--blur:40px`, Motion on Touch, drift off), then comparing the computed
+  style and box geometry of all 118 nodes against the previous page: identical. 13/13 harness
+  checks pass (pick, dedupe, track switch with row reuse, settings persistence, back chain,
+  hit-test flat and tilted).
+- [ ] 34. The seek bar has no accessible name.
+  **Symptom.** `#seek` carries an `aria-valuetext` but no `aria-label` and no `<label>` of its own,
+  so the accessibility tree exposes a nameless slider: TalkBack announces "slider, 1:23" with no
+  indication that it is the playback position, while every settings slider gets its name from the
+  `<label class="opt">` it sits in.
+- [ ] 35. The collapsed player bubble is not exposed as a control.
+  **Symptom.** `#bubble` is a plain `div` with an `aria-label`, and `aria-label` on a generic
+  element with no role is ignored, so once the player is closed the only way to reopen it is an
+  element assistive tech does not announce, cannot focus and cannot activate.

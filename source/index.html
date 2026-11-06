@@ -571,10 +571,34 @@ $('optBtn').onclick=openSheet;$('doneBtn').onclick=closeSheet;scrim.onclick=clos
 /* ---------- settings: glass + 4D depth, persisted ---------- */
 const root=document.documentElement.style;
 const DEF={glass:18,blur:28,depth:60,tilt:100,par:100,glow:100,shadow:100,drift:1,motion:'auto'};
+/* A restored setting is only trusted as far as the control that produces it can express it. The
+   blob in storage is whatever the last version of this page wrote, and every key used to be copied
+   into `S` verbatim: a `glass` of "abc" reached `--glass` as NaN, which makes
+   `background:rgba(255,255,255,var(--glass))` invalid, so the card painted with no background and
+   no backdrop blur at all; a null depth and a negative blur did the same to `--tiltk` and `--blur`,
+   a parallax of 1e9 threw the layers across the screen, and the readouts printed "abc%" and
+   "null%". Nothing on screen could put it back either - only the slider whose own value was bad
+   repaired itself when dragged, so the rest of the damage survived the session. Each key is now
+   accepted only in the shape its control produces: a finite number inside that slider's own
+   min/max, 0 or 1 for the drift switch, one of the three motion modes. Anything else keeps the
+   default, which is the only value guaranteed to be a working one. A value this page could have
+   written is kept exactly as stored, so an ordinary session restores what it saved. */
+const LIM={glass:[2,50],blur:[0,60],depth:[0,100],tilt:[0,150],par:[0,200],glow:[0,200],shadow:[0,200]};
+const MODES=['auto','touch','off'];
 let S=Object.assign({},DEF);
 try{
   const raw=localStorage.getItem('glass.settings.v1');
-  if(raw){const o=JSON.parse(raw);Object.keys(DEF).forEach(k=>{if(o[k]!==undefined)S[k]=o[k]})}
+  if(raw){
+    const o=JSON.parse(raw);
+    if(o&&typeof o==='object')Object.keys(DEF).forEach(k=>{
+      const v=o[k];
+      if(v===undefined||v===null)return;          /* absent: keep the default */
+      if(k==='motion'){if(MODES.indexOf(v)>-1)S.motion=v;return}
+      if(k==='drift'){if(v===0||v===1||v===true||v===false)S.drift=v?1:0;return}
+      const lim=LIM[k];
+      if(lim&&typeof v==='number'&&isFinite(v)&&v>=lim[0]&&v<=lim[1])S[k]=v;
+    });
+  }
 }catch(e){}
 
 /* A slider fires `input` continuously during a drag, and each one serialised the whole settings
