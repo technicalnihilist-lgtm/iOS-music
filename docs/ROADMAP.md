@@ -413,3 +413,30 @@ snapshot of both builds, so nothing visible moved.
   sheet gained `aria-modal="true"`, and the 1x1 `#file` input parked at `left:-9999px` is out of the
   tab order (`tabindex="-1"`, it is still clicked by "Add songs"), so the ring no longer lands on a
   control that is not on screen.
+- [x] 39. The row that is playing is marked only by a CSS class, so a screen reader cannot tell
+  which song is current.
+  *(5.2)* — the current row now carries `aria-current="true"` and every other row carries nothing,
+  written from both places the `cur` class is already written (the rebuild and the highlight-only
+  path) so the attribute and the paint cannot disagree. No stylesheet selects on the attribute, so
+  nothing visible moved: with animations frozen and `--mx`/`--my` pinned, the box geometry and 33
+  computed properties of all 139 nodes are identical to the previous page with the player up and
+  with the sheet open, and 14/14 harness checks pass (pick, dedupe, dedupe across picks, track
+  switch with row reuse, back chain, reopen, settings persistence, hit-test flat and tilted, row
+  state before and after a rebuild). The two checks that probe items 40 and 41 still fail, as they
+  should.
+  **Symptom.** `#list .cur` was the only thing saying which track is playing, and a class is not
+  exposed to assistive tech: every row announced itself identically ("Alpha, My library, list
+  item"), so a TalkBack user had no way to tell which song the transport buttons were pointed at.
+  Measured before the change: `aria-current` was `null` on all three rows.
+- [ ] 40. The Motion segmented control exposes no selected state.
+  **Symptom.** Auto / Touch / Off toggle a visual `on` class and nothing else, so the accessibility
+  tree says three identical buttons and never which one is in force; a screen-reader user cannot
+  tell whether the card is following the gyroscope, the finger or nothing. Measured: all three
+  report `aria-pressed: null` while exactly one is painted as selected. The drift switch in the
+  same sheet already reports `aria-pressed`.
+- [ ] 41. Adding a song throws keyboard focus out of the playlist.
+  **Symptom.** `renderList` replaces every row node when the set of files changes, so a row that
+  held focus when the picker returned is destroyed under it and the browser drops focus to
+  `<body>`; a keyboard or switch user is back at the top of the page and has to tab in again to
+  reach the song they were on. Measured: with focus on row 1, picking one new file left
+  `document.activeElement` as `BODY`.

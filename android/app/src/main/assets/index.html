@@ -933,7 +933,7 @@ function renderList(rebuild){
   }
   /* rebuild only when the set of songs changed; a track change just moves the highlight */
   if(rebuild||listCount!==tracks.length||list.children.length!==tracks.length){
-    list.innerHTML=tracks.map((t,i)=>`<div class="it${i===idx?' cur':''}" role="listitem" tabindex="0" data-i="${i}"><div class="th" style="--ah:${t.h}"></div><div class="tt"><b>${esc(t.t)}</b><small>${esc(t.a)}</small></div><div class="eq"><i></i><i></i><i></i></div></div>`).join('');
+    list.innerHTML=tracks.map((t,i)=>`<div class="it${i===idx?' cur':''}" role="listitem" tabindex="0" data-i="${i}"${i===idx?' aria-current="true"':''}><div class="th" style="--ah:${t.h}"></div><div class="tt"><b>${esc(t.t)}</b><small>${esc(t.a)}</small></div><div class="eq"><i></i><i></i><i></i></div></div>`).join('');
     listCount=tracks.length;
     return;
   }
@@ -941,6 +941,17 @@ function renderList(rebuild){
   for(let i=0;i<rows.length;i++){
     const want=(i===idx);
     if(rows[i].classList.contains('cur')!==want)rows[i].classList.toggle('cur',want);
+    /* The row that is playing was marked by the `cur` class alone, which is paint, not meaning:
+       every row in the list announced itself identically, so a screen-reader user had no way to
+       tell which song the transport buttons were pointing at. `aria-current` carries that one bit
+       of state on the same row the class already moves, written from the same two places the
+       class is written, so the two cannot disagree. No stylesheet selects on the attribute, so
+       nothing visible changes. */
+    const isCur=rows[i].getAttribute('aria-current')==='true';
+    if(isCur!==want){
+      if(want)rows[i].setAttribute('aria-current','true');
+      else rows[i].removeAttribute('aria-current');
+    }
   }
 }
 /* A playlist row is the only way to jump to a song, and it answered the pointer alone. The rows
@@ -993,5 +1004,6 @@ if('mediaSession' in navigator){
   bind('pause',()=>au.pause());
 }
 </script>
+
 </body>
 </html>

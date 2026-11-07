@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 5.2 — the playlist says which song is playing
+
+- The playing row was marked by a CSS class alone, which assistive tech never sees, so every row in the playlist announced itself identically and a TalkBack user could not tell which track the transport buttons were pointing at; the current row now carries `aria-current="true"` (and the others nothing) from both places the highlight is already written, and nothing visible changed.
+
 ### 5.1 — the settings sheet keeps the keyboard to itself
 
 - Tab past "Reset defaults" walked out of the open sheet and into `#closeBtn`, `#pp`, `#seek` and the playlist rows behind the scrim, and Escape did nothing; Tab is now wrapped between the sheet's first and last visible control (entering the sheet if focus was still outside it), Escape closes the sheet down the path Done, the scrim and the back key already use, the sheet is marked `aria-modal`, and the off-screen file input is no longer a tab stop — nothing visible changed.
