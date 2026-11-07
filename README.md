@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 5.0 — closing the settings sheet returns you to where you were
+
+- `#doneBtn`, the scrim and the hardware back all closed the sheet while the focused control was still inside it, and the close timer then hid that subtree and dropped focus to `<body>`, so a keyboard or switch user lost their place and had to tab in from the top; the control that opened the sheet is now remembered and focused again on close (only when focus was actually inside the sheet or lost to the body), the sheet carries `role="dialog"`/`aria-labelledby` and `#optBtn` reports `aria-expanded`, and nothing visible changed.
+
 ### 4.9 — every playlist row is a tab stop
 
 - The playlist rows were `div`s with an `onclick` and nothing else, so the tab order stepped over the whole list: a keyboard or switch-access user could walk the transport buttons but could not jump to a song, and the empty-state row could not open the picker at all; each row is now `tabindex="0"` and Enter or Space activates it through the same function the tap handler calls, so the pointer and keyboard paths cannot drift, and nothing visible changed.

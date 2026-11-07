@@ -158,7 +158,7 @@ input[type=range]{touch-action:pan-y}
   <div class="top">
     <button class="chip" id="closeBtn" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     <b>Now Playing</b>
-    <button class="chip" id="optBtn" aria-label="Options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+    <button class="chip" id="optBtn" aria-label="Options" aria-controls="sheet" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
   </div>
   <div class="artwrap"><div class="art" id="art"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v11.6A3.5 3.5 0 1 0 11 18V8h6V3z"/></svg></div></div>
   <div class="meta" aria-live="polite" aria-atomic="true"><h2 id="title">—</h2><p id="artist">—</p></div>
@@ -175,9 +175,9 @@ input[type=range]{touch-action:pan-y}
 <div class="bubble glass" id="bubble" role="button" tabindex="0" aria-label="Open player"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v11.6A3.5 3.5 0 1 0 11 18V8h6V3z"/></svg></div>
 
 <div class="scrim" id="scrim"></div>
-<section class="sheet glass" id="sheet">
+<section class="sheet glass" id="sheet" role="dialog" aria-labelledby="sheetTitle">
   <div class="grab"></div>
-  <h3>Settings</h3>
+  <h3 id="sheetTitle">Settings</h3>
 
   <div class="sec">Glass</div>
   <label class="opt"><span>Transparency <em id="glV">18%</em></span><input type="range" id="gl" min="2" max="50" value="18" aria-valuetext="18%"></label>
@@ -542,7 +542,9 @@ function openApp(){
 function closeApp(){
   if(closing)return;
   closing=true;
-  closeSheet();
+  /* the player is collapsing under this: focusing its options button would only be dropped again
+     when the app is hidden 520ms later, so leave focus where the close leaves it */
+  closeSheet(false);
   app.classList.remove('in');app.classList.add('out');
   closeTimer=setTimeout(()=>{
     closeTimer=null;closing=false;
@@ -561,18 +563,37 @@ bubble.addEventListener('keydown',e=>{
 
 /* options sheet with bounce */
 let sheetTimer=null;
+/* Closing the sheet used to strand focus. `Done`, a tap on the scrim and the Android back key all
+   ran closeSheet while the focused control was inside the sheet, and when the 420ms close timer
+   took `show` off, the section became display:none and the browser dropped focus to <body>. A
+   keyboard or switch-access user was then back at the top of the document and had to tab through
+   the whole player to reach the control they had been on. The control that opened the sheet is
+   remembered and focused again on close, but only when focus is actually inside the sheet (or was
+   lost to <body>), so a close never pulls focus away from somewhere the user has since moved to.
+   `preventScroll` keeps the restore from scrolling the page, and `focus()` on a button only paints
+   the :focus-visible ring when the last input was the keyboard, so a pointer or touch user sees
+   the same pixels as before. */
+let sheetFocus=$('optBtn');   /* the sheet's only opener: the fallback when nothing held focus */
 function openSheet(){
   if(sheetTimer){clearTimeout(sheetTimer);sheetTimer=null}  /* reopen mid-close: cancel the hide */
+  const a=document.activeElement;                            /* keep the previous opener if this one has none */
+  if(a&&a!==document.body&&!sheet.contains(a))sheetFocus=a;
   sheet.classList.remove('out');sheet.classList.add('show');restart(sheet,'in');
   scrim.classList.add('on');
+  $('optBtn').setAttribute('aria-expanded','true');
 }
-function closeSheet(){
+function closeSheet(restoreFocus=true){
   if(!sheet.classList.contains('show')||sheet.classList.contains('out'))return;
   if(sheetTimer){clearTimeout(sheetTimer);sheetTimer=null}
+  const a=document.activeElement,had=a===null||a===document.body||sheet.contains(a);
   sheet.classList.remove('in');sheet.classList.add('out');scrim.classList.remove('on');
+  $('optBtn').setAttribute('aria-expanded','false');
   sheetTimer=setTimeout(()=>{sheetTimer=null;sheet.classList.remove('show','out')},420);
+  if(restoreFocus&&had&&sheetFocus&&document.contains(sheetFocus)){
+    try{sheetFocus.focus({preventScroll:true})}catch(e){sheetFocus.focus()}
+  }
 }
-$('optBtn').onclick=openSheet;$('doneBtn').onclick=closeSheet;scrim.onclick=closeSheet;
+$('optBtn').onclick=openSheet;$('doneBtn').onclick=()=>closeSheet();scrim.onclick=()=>closeSheet();
 
 /* ---------- settings: glass + 4D depth, persisted ---------- */
 const root=document.documentElement.style;

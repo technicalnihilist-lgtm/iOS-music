@@ -381,7 +381,18 @@ snapshot of both builds, so nothing visible moved.
   only for `:focus-visible`, i.e. keyboard navigation), and 21/21 harness checks pass (pick, dedupe,
   dedupe across picks, track switch with row reuse, back chain, settings persistence, hit-test flat
   and tilted, row tab stops, row focus, Space/Enter activation, pointer activation, visual identity).
-- [ ] 37. Closing the settings sheet throws focus away instead of returning it.
+- [x] 37. Closing the settings sheet throws focus away instead of returning it.
+  *(5.0)* — the element that held focus when the sheet opened is remembered and focused again on
+  close, and only when focus was still inside the sheet or had been dropped to `<body>`, so a
+  close never pulls focus off a control the user has moved to since. `closeApp` closes the sheet
+  with the restore off: the player is collapsing under it and the restore would be dropped again
+  when the app is hidden. `preventScroll` keeps the restore from scrolling, and a programmatic
+  focus on a button only paints the `:focus-visible` ring when the last input was the keyboard, so
+  a pointer or touch user sees no new ring. The `aria-expanded` on `#optBtn` and
+  `role="dialog"`/`aria-labelledby` on the sheet named in the symptom were added in the same pass;
+  the focus boundary itself (Tab still leaves the sheet) is item 38 and was left alone. Measured:
+  `activeElement` was `doneBtn` after Done and `gl` after the back key, and is `optBtn` after all
+  three close paths now.
   **Symptom.** `#optBtn` opens the sheet and `#doneBtn`, the scrim or the hardware back closes it,
   but nothing moves focus on either edge. Opening the sheet leaves `document.activeElement` on
   `#optBtn`, so the first Tab walks into the sheet from behind it; closing it while a slider has
