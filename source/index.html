@@ -175,7 +175,7 @@ input[type=range]{touch-action:pan-y}
 <div class="bubble glass" id="bubble" role="button" tabindex="0" aria-label="Open player"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v11.6A3.5 3.5 0 1 0 11 18V8h6V3z"/></svg></div>
 
 <div class="scrim" id="scrim"></div>
-<section class="sheet glass" id="sheet" role="dialog" aria-labelledby="sheetTitle">
+<section class="sheet glass" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
   <div class="grab"></div>
   <h3 id="sheetTitle">Settings</h3>
 
@@ -204,7 +204,7 @@ input[type=range]{touch-action:pan-y}
     <button class="pill" id="doneBtn">Done</button>
   </div>
   <button class="pill ghost" id="resetBtn">Reset defaults</button>
-  <input type="file" id="file" class="filein" accept="audio/*" multiple>
+  <input type="file" id="file" class="filein" accept="audio/*" multiple tabindex="-1">
 </section>
 
 <audio id="au" preload="auto" playsinline></audio>
@@ -594,6 +594,38 @@ function closeSheet(restoreFocus=true){
   }
 }
 $('optBtn').onclick=openSheet;$('doneBtn').onclick=()=>closeSheet();scrim.onclick=()=>closeSheet();
+/* The sheet is a modal dialog, but Tab used to walk straight out of it: past `Reset defaults` the
+   next Tab landed on the player's own controls behind the scrim, so a keyboard or switch user
+   could operate the page the sheet was covering while the sheet stayed open, and the only way
+   back was Shift+Tab through everything. Tab is now contained: inside the sheet it wraps from the
+   last control to the first and back, and a Tab pressed while focus is still outside (the opener,
+   or <body> after a tap-opened sheet) enters at the first control. Escape closes it down the same
+   path Done, the scrim and the Android back key already take. The stop list is read on every
+   keypress; `tabIndex` and `getClientRects` keep disabled, hidden and display:none controls (and
+   the 1x1 file input parked off-screen) out of the ring, so nothing visible or interactive is
+   added or moved. */
+const sheetStops=()=>{
+  const out=[];
+  for(const el of sheet.querySelectorAll('button,[href],input,select,textarea,[tabindex]')){
+    if(el.disabled||el.tabIndex<0||el.hidden||!el.getClientRects().length)continue;
+    out.push(el);
+  }
+  return out;
+};
+document.addEventListener('keydown',e=>{
+  if(!sheet.classList.contains('show')||sheet.classList.contains('out'))return;
+  if(e.key==='Escape'||e.key==='Esc'){
+    if(!e.altKey&&!e.ctrlKey&&!e.metaKey){e.preventDefault();closeSheet()}
+    return;
+  }
+  if(e.key!=='Tab'||e.altKey||e.ctrlKey||e.metaKey)return;
+  const f=sheetStops();
+  if(!f.length)return;
+  const first=f[0],last=f[f.length-1],a=document.activeElement;
+  if(!sheet.contains(a)){e.preventDefault();(e.shiftKey?last:first).focus();return}
+  if(e.shiftKey&&a===first){e.preventDefault();last.focus()}
+  else if(!e.shiftKey&&a===last){e.preventDefault();first.focus()}
+});
 
 /* ---------- settings: glass + 4D depth, persisted ---------- */
 const root=document.documentElement.style;

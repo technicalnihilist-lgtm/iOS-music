@@ -401,9 +401,15 @@ snapshot of both builds, so nothing visible moved.
   tabbing from the top. Measured before the change: `activeElement` was `gl` after `#doneBtn` was
   activated. `#optBtn` also carries no `aria-expanded` and the sheet no `role="dialog"` /
   `aria-labelledby`, so assistive tech is not told that the button opened anything.
-- [ ] 38. The settings sheet is not a focus boundary: Tab walks out of it into the player behind.
+- [x] 38. The settings sheet is not a focus boundary: Tab walks out of it into the player behind.
   **Symptom.** The sheet is a `section` painted over the player, not a dialog. Once it is open the
   scrim covers the page but the controls underneath are still in the tab order and still receive
   the keyboard, so tabbing past the last control in the sheet ("Reset defaults") continues into
   `#closeBtn`, `#pp`, `#seek` and the playlist rows - controls the user cannot see and did not
   mean to reach - while Escape, the key every other sheet-shaped surface answers, does nothing.
+  *(5.1)* — one document-level `keydown` handler owns Tab while the sheet is open and wraps it
+  between the first and last visible control, pulling focus in from `#optBtn`/`<body>` if it is
+  still outside; Escape runs the same `closeSheet()` that Done, the scrim and the back key run. The
+  sheet gained `aria-modal="true"`, and the 1x1 `#file` input parked at `left:-9999px` is out of the
+  tab order (`tabindex="-1"`, it is still clicked by "Add songs"), so the ring no longer lands on a
+  control that is not on screen.

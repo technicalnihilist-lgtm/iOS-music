@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 5.1 — the settings sheet keeps the keyboard to itself
+
+- Tab past "Reset defaults" walked out of the open sheet and into `#closeBtn`, `#pp`, `#seek` and the playlist rows behind the scrim, and Escape did nothing; Tab is now wrapped between the sheet's first and last visible control (entering the sheet if focus was still outside it), Escape closes the sheet down the path Done, the scrim and the back key already use, the sheet is marked `aria-modal`, and the off-screen file input is no longer a tab stop — nothing visible changed.
+
 ### 5.0 — closing the settings sheet returns you to where you were
 
 - `#doneBtn`, the scrim and the hardware back all closed the sheet while the focused control was still inside it, and the close timer then hid that subtree and dropped focus to `<body>`, so a keyboard or switch user lost their place and had to tab in from the top; the control that opened the sheet is now remembered and focused again on close (only when focus was actually inside the sheet or lost to the body), the sheet carries `role="dialog"`/`aria-labelledby` and `#optBtn` reports `aria-expanded`, and nothing visible changed.
