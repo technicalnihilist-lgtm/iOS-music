@@ -356,3 +356,43 @@ snapshot of both builds, so nothing visible moved.
   harness checks pass (pick, dedupe, duplicate within one pick, track switch with row reuse, back
   chain, settings persistence, hit-test flat and tilted, accessible names, bubble role/name/focus/
   Enter/Space/tap, visual identity).
+
+- [x] 36. Playlist rows cannot be reached or activated from the keyboard.
+  **Symptom.** Every other control on the page has been made operable without a pointer - the
+  transport buttons, the chip buttons, the sliders, the motion segment, the drift switch and (item
+  35) the collapsed bubble - but the playlist rows never were. They are `div`s with an `onclick`
+  and nothing else, so the tab order steps straight over the whole playlist: a keyboard or
+  switch-access user can walk the transport and change track with Next/Previous, but cannot jump to
+  an entry, and the empty-state row ("No songs yet / Tap here to add songs") cannot open the picker
+  at all, so the app is unusable without a pointer on a device with no files in it yet. Measured
+  before the change: `tabIndex` -1 on every row, `focus()` left `document.activeElement` on the
+  body, and a `keydown` of Enter on a row changed nothing (`idx` stayed where it was).
+  **Fixed.** Rows are tab stops (`tabindex="0"` in both the track-row and the empty-state template)
+  and Enter or Space activates them. Both the click handler and the key handler go through one
+  `activateRow()`, so the pointer path and the keyboard path cannot drift - including the
+  repeat-tap guard that stops a second activation inside `REPEAT_MS` from pausing the track the
+  first one started. Space calls `preventDefault()` so it activates the row instead of scrolling the
+  player, which is what a native button would do; Enter needs no default suppressed. Verified by
+  driving the page: all three rows report `tabIndex 0`, `focus()` puts `activeElement` on the row,
+  Space reports `defaultPrevented:true` and selects row 0, Enter selects row 2, Enter on the row
+  already playing toggles instead of reloading, and a pointer click still selects as before.
+  Nothing visible changed: with animations frozen and `--mx`/`--my` pinned, the computed style and
+  box geometry of all 141 nodes are byte-identical to the previous page (the focus ring is drawn
+  only for `:focus-visible`, i.e. keyboard navigation), and 21/21 harness checks pass (pick, dedupe,
+  dedupe across picks, track switch with row reuse, back chain, settings persistence, hit-test flat
+  and tilted, row tab stops, row focus, Space/Enter activation, pointer activation, visual identity).
+- [ ] 37. Closing the settings sheet throws focus away instead of returning it.
+  **Symptom.** `#optBtn` opens the sheet and `#doneBtn`, the scrim or the hardware back closes it,
+  but nothing moves focus on either edge. Opening the sheet leaves `document.activeElement` on
+  `#optBtn`, so the first Tab walks into the sheet from behind it; closing it while a slider has
+  focus leaves `activeElement` on that slider inside a `display:none` subtree, which the browser
+  then drops to the body - a keyboard or switch user loses their place in the page and has to start
+  tabbing from the top. Measured before the change: `activeElement` was `gl` after `#doneBtn` was
+  activated. `#optBtn` also carries no `aria-expanded` and the sheet no `role="dialog"` /
+  `aria-labelledby`, so assistive tech is not told that the button opened anything.
+- [ ] 38. The settings sheet is not a focus boundary: Tab walks out of it into the player behind.
+  **Symptom.** The sheet is a `section` painted over the player, not a dialog. Once it is open the
+  scrim covers the page but the controls underneath are still in the tab order and still receive
+  the keyboard, so tabbing past the last control in the sheet ("Reset defaults") continues into
+  `#closeBtn`, `#pp`, `#seek` and the playlist rows - controls the user cannot see and did not
+  mean to reach - while Escape, the key every other sheet-shaped surface answers, does nothing.
