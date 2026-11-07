@@ -453,3 +453,36 @@ snapshot of both builds, so nothing visible moved.
   `document.activeElement` is the row with `data-i="1"`; with the same harness on the previous
   page it was `BODY`. Rows are still reused on a track change, and the flat and tilted
   `elementFromPoint` hit-tests are unchanged.
+
+## Transport state (found 2026-11-07, backlog exhausted at 41)
+
+- [x] 42. A pause tapped inside the source-swap window is swallowed: the transport stays painted as
+  playing over silence and the Android shell keeps audio focus.
+  **Symptom.** Swapping a source fires a `pause` of its own, so `au.onpause` ignored *every* pause
+  for 700 ms after a track change — including one the user asked for. Tapping Next and then pause
+  ~250 ms later (the new track already playing) left `au.paused` true while `#app` still carried
+  `playing`: pause icon, scaled-up artwork, equaliser still animating, `GP.setPlaying(false)` never
+  called, and nothing on screen corrected it until the next play/pause. The same hole was open on
+  the current playlist row and on the media-session pause action. Measured before, in the harness:
+  `{auPaused: true, playingClass: true, setPlaying calls: [1]}`, unchanged 1.5 s later; the settled
+  pause control case reported `{auPaused: true, playingClass: false, calls: [1,1,0]}`.
+  **Fixed in 5.5.** Every deliberate pause now goes through `requestPause()`, which marks the pause
+  as the page's own; `au.onpause` still ignores an unsolicited pause inside the switching window but
+  honours one the page asked for, and `attemptPlay()` clears the mark so a play supersedes a pause
+  that has not landed. Measured after: the same Next-then-pause tap gives
+  `{auPaused: true, playingClass: false, calls: [1,0]}`, and the row-tap path matches. A plain Next
+  still keeps `playing` and reports no spurious pause (`calls: [1]`), settled pause/resume, autoplay
+  on Next, end-of-track advance, row reuse, dedupe, settings persistence and the flat and tilted
+  `elementFromPoint` hit-tests are all unchanged.
+- [ ] 43. The play/pause button never says whether it is playing.
+  **Symptom.** `#pp` carries the constant accessible name "Play or pause" and no `aria-pressed`, so
+  the only thing that distinguishes the two states is the SVG swap — paint, not meaning, the same
+  gap items 39 and 40 closed on the playlist row and the Motion switch. Measured: `aria-label` is
+  "Play or pause" and `aria-pressed` is `null` both while playing and while paused.
+- [ ] 44. The audio hot paths resolve their nodes by id on every tick although `EL` already caches
+  them.
+  **Symptom.** `ontimeupdate` calls `$('seek')` on every tick and `$('cur')`/`$('dur')` whenever
+  their text changes; `sk.oninput` and `onplay`/`onpause` do the same. Item 8 hoisted exactly these
+  nodes into `EL` for `load()` and `resetSeek()`, so the hot paths are the only ones still looking
+  them up. Measured: 10 `getElementById` calls over 2 s of playback (8 `timeupdate` ticks, 1.25 per
+  tick) plus one per scrub frame and per play/pause.

@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 5.5 — a pause right after Next is no longer swallowed
+
+- Swapping a source fires a `pause` of its own, and `au.onpause` ignored every pause for the 700 ms after a track change — so tapping pause a moment after Next, with the new track already playing, left the card painted as playing (pause icon, scaled art, animating equaliser) over silence and never told the Android shell to drop audio focus, indefinitely; a pause the page asks for now carries a mark that `au.onpause` honours whenever it lands, only an unsolicited pause inside the window is ignored, and nothing visible changed.
+
 ### 5.4 — adding a song keeps your place in the playlist
 
 - `renderList` replaced every row node when the set of songs changed, so a row that held focus was destroyed under it and the browser dropped focus to `<body>`, putting a keyboard or switch user back at the top of the page; the row that last held focus is now remembered by its index and focused again after the rebuild (with `preventScroll`, and only when focus was inside the list or had already fallen to the body), and nothing visible changed.

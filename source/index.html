@@ -241,6 +241,7 @@ const objUrls=new Set();
 const mkUrl=b=>{const u=URL.createObjectURL(b);objUrls.add(u);return u};
 let idx=0;
 let switching=false;   // a new source is loading: ignore the pause event it fires
+let pauseAsked=false;  // the pause on its way is the user's, not the one a source swap fires
 let dragging=false;    // the user is scrubbing the seek bar
 let fails=0;           // consecutive tracks that refused to play
 const MAX_SKIP=3;      // how many consecutive unplayable tracks the skip chain may walk
@@ -295,6 +296,7 @@ function playRefused(err){
 }
 function attemptPlay(onOk){
   stopped=false;               /* any fresh attempt gets a fresh budget of announcements */
+  pauseAsked=false;            /* a play request supersedes a pause that has not landed yet */
   let p;
   try{p=au.play()}catch(e){playRefused(e);return}
   if(!p||typeof p.then!=='function'){if(onOk)onOk();return}
@@ -412,7 +414,10 @@ function load(i,autoplay,dir){
 }
 
 /* transport */
-$('pp').onclick=()=>{if(!tracks.length){$('file').click();return}au.paused?attemptPlay():au.pause()};
+/* Every deliberate pause goes through here, so `onpause` can tell the user's pause apart from the
+   one swapping a source fires (see the guard there). */
+function requestPause(){pauseAsked=true;au.pause()}
+$('pp').onclick=()=>{if(!tracks.length){$('file').click();return}au.paused?attemptPlay():requestPause()};
 $('next').onclick=()=>{if(!tracks.length){$('file').click();return}load(idx+1,!au.paused||au.ended,1)};
 $('prev').onclick=()=>{
   if(!tracks.length){$('file').click();return}
@@ -427,7 +432,16 @@ au.onplay=()=>{
   try{if(window.GP&&window.GP.setPlaying)window.GP.setPlaying(true)}catch(e){}
 };
 au.onpause=()=>{
-  if(switching)return;
+  /* A source swap fires a pause of its own, and that one must not be painted as the user's: it
+     would drop the `playing` class the new track is about to need. But the whole 700 ms switching
+     window used to be treated as the swap's, so a pause tapped inside it - a second or so after
+     Next, while the new track was already playing - was swallowed: the card kept the pause icon,
+     the artwork stayed scaled up and the equaliser kept animating over silence, the Android shell
+     was never told to drop audio focus, and nothing brought the transport back until the next
+     play/pause. A pause the page asked for is now honoured whenever it lands; only an unsolicited
+     one inside the window is ignored. */
+  if(switching&&!pauseAsked)return;
+  pauseAsked=false;
   try{if(window.GP&&window.GP.setPlaying)window.GP.setPlaying(false)}catch(e){}
   app.classList.remove('playing');
   restart($('pp'),'bump');
@@ -1017,7 +1031,7 @@ function activateRow(r){
     /* this row's source was assigned a moment ago: a repeat tap in the same burst, not a request
        to pause. Toggling here stopped the track the first tap had just started. */
     if(performance.now()-loadAt<REPEAT_MS)return;
-    au.paused?attemptPlay():au.pause();return;
+    au.paused?attemptPlay():requestPause();return;
   }
   load(i,true,i>idx?1:-1);
 }
@@ -1048,7 +1062,7 @@ if('mediaSession' in navigator){
   bind('nexttrack',()=>$('next').click());
   bind('previoustrack',()=>$('prev').click());
   bind('play',()=>attemptPlay());
-  bind('pause',()=>au.pause());
+  bind('pause',()=>requestPause());
 }
 </script>
 
