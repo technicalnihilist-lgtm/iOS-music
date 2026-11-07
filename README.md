@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 4.9 — every playlist row is a tab stop
+
+- The playlist rows were `div`s with an `onclick` and nothing else, so the tab order stepped over the whole list: a keyboard or switch-access user could walk the transport buttons but could not jump to a song, and the empty-state row could not open the picker at all; each row is now `tabindex="0"` and Enter or Space activates it through the same function the tap handler calls, so the pointer and keyboard paths cannot drift, and nothing visible changed.
+
 ### 4.8 — the bubble is a button, not a picture of one
 
 - Once the player was closed, the floating bubble was the only way back in, but it was a bare `div` with no role and no tab stop, so assistive tech announced nothing focusable and a keyboard or switch user was locked out; it now carries `role="button"`, `tabindex="0"` and answers Enter and Space (Space without scrolling the page), with the same focus ring every other control already had and no visible change.
