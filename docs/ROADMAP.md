@@ -337,7 +337,22 @@ snapshot of both builds, so nothing visible moved.
   the previous page, and 15/15 harness checks pass (pick, dedupe, duplicate within one pick, track
   switch with row reuse, back chain, settings persistence, hit-test flat and tilted, accessible
   names).
-- [ ] 35. The collapsed player bubble is not exposed as a control.
+- [x] 35. The collapsed player bubble is not exposed as a control.
   **Symptom.** `#bubble` is a plain `div` with an `aria-label`, and `aria-label` on a generic
   element with no role is ignored, so once the player is closed the only way to reopen it is an
-  element assistive tech does not announce, cannot focus and cannot activate.
+  element assistive tech does not announce, cannot focus and cannot activate. *(4.8)* - the
+  accessibility tree reported `{role:"generic", name:"Open player"}`, a `tabIndex` of `-1` and no
+  keyboard path at all, so a switch or keyboard user who closed the player could not get back in.
+  **Fixed.** `#bubble` now carries `role="button"` and `tabindex="0"`, and a `keydown` handler
+  activates it on Enter and Space (preventing the default scroll on Space, since a `div` fires no
+  synthetic click the way a native button does). The existing `:focus-visible` rule already
+  matches `[tabindex]`, so the bubble gets the same keyboard focus ring as every other control and
+  nothing else about it moved. Verified through the browser's accessibility tree
+  (`Accessibility.getPartialAXTree`), which now reports `{role:"button", name:"Open player"}` with
+  `tabIndex 0` and focus accepted, and by driving the keyboard: Enter and Space both reopen the
+  collapsed player and Space reports `defaultPrevented:true`, while a pointer tap still opens it as
+  before. Nothing visible changed: with animations and rAF frozen and `--mx`/`--my` pinned, the
+  computed style and box geometry of all 119 nodes are identical to the previous page, and 21/21
+  harness checks pass (pick, dedupe, duplicate within one pick, track switch with row reuse, back
+  chain, settings persistence, hit-test flat and tilted, accessible names, bubble role/name/focus/
+  Enter/Space/tap, visual identity).

@@ -172,7 +172,7 @@ input[type=range]{touch-action:pan-y}
   <div class="list" id="list" role="list"></div>
 </main></div></div>
 
-<div class="bubble glass" id="bubble" aria-label="Open player"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v11.6A3.5 3.5 0 1 0 11 18V8h6V3z"/></svg></div>
+<div class="bubble glass" id="bubble" role="button" tabindex="0" aria-label="Open player"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v11.6A3.5 3.5 0 1 0 11 18V8h6V3z"/></svg></div>
 
 <div class="scrim" id="scrim"></div>
 <section class="sheet glass" id="sheet">
@@ -552,6 +552,12 @@ function closeApp(){
 }
 $('closeBtn').onclick=closeApp;
 bubble.onclick=openApp;
+/* The bubble is the only way back into a collapsed player, so it must answer the keyboard the
+   way a button does: Enter and Space activate it. A native button would also fire click on those
+   keys; this div does not, so do it explicitly and swallow the default scroll on Space. */
+bubble.addEventListener('keydown',e=>{
+  if(e.key==='Enter'||e.key===' '||e.key==='Spacebar'){e.preventDefault();openApp();}
+});
 
 /* options sheet with bounce */
 let sheetTimer=null;

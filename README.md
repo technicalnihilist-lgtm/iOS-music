@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 4.8 — the bubble is a button, not a picture of one
+
+- Once the player was closed, the floating bubble was the only way back in, but it was a bare `div` with no role and no tab stop, so assistive tech announced nothing focusable and a keyboard or switch user was locked out; it now carries `role="button"`, `tabindex="0"` and answers Enter and Space (Space without scrolling the page), with the same focus ring every other control already had and no visible change.
+
 ### 4.7 — the seek bar says what it is
 
 - `#seek` had an `aria-valuetext` but no name, so the accessibility tree exposed a nameless slider and TalkBack announced "slider, 1:23" with no indication it was the playback position; it now carries `aria-label="Playback position"` and nothing visible changed.
