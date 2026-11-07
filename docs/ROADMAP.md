@@ -428,12 +428,16 @@ snapshot of both builds, so nothing visible moved.
   exposed to assistive tech: every row announced itself identically ("Alpha, My library, list
   item"), so a TalkBack user had no way to tell which song the transport buttons were pointed at.
   Measured before the change: `aria-current` was `null` on all three rows.
-- [ ] 40. The Motion segmented control exposes no selected state.
+- [x] 40. The Motion segmented control exposes no selected state.
   **Symptom.** Auto / Touch / Off toggle a visual `on` class and nothing else, so the accessibility
   tree says three identical buttons and never which one is in force; a screen-reader user cannot
   tell whether the card is following the gyroscope, the finger or nothing. Measured: all three
   report `aria-pressed: null` while exactly one is painted as selected. The drift switch in the
   same sheet already reports `aria-pressed`.
+  **Fixed in 5.3.** All three buttons now publish `aria-pressed` from `applyS`, the same function
+  that moves the `on` class, and the markup ships the initial state. Measured after: `true,false,false`
+  on load, exactly one `true` after each of the three taps. No stylesheet selects on `[aria-pressed]`
+  for `.seg button`, so the paint is unchanged.
 - [ ] 41. Adding a song throws keyboard focus out of the playlist.
   **Symptom.** `renderList` replaces every row node when the set of files changes, so a row that
   held focus when the picker returned is destroyed under it and the browser drops focus to

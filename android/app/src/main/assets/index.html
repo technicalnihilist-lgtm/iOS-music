@@ -193,9 +193,9 @@ input[type=range]{touch-action:pan-y}
 
   <div class="sec">Motion</div>
   <div class="seg" id="mot">
-    <button data-m="auto" class="on">Auto</button>
-    <button data-m="touch">Touch</button>
-    <button data-m="off">Off</button>
+    <button data-m="auto" class="on" aria-pressed="true">Auto</button>
+    <button data-m="touch" aria-pressed="false">Touch</button>
+    <button data-m="off" aria-pressed="false">Off</button>
   </div>
   <div class="row2"><span>Idle drift <em>slow sway</em></span><button class="sw" id="driftBtn" aria-pressed="true" aria-label="Idle drift"></button></div>
 
@@ -721,7 +721,15 @@ function applyS(){
   if(driftEl)driftEl.classList.toggle('off',!S.drift);
   if(driftBtn)driftBtn.setAttribute('aria-pressed',S.drift?'true':'false');
   const seg=$('mot');
-  if(seg)[...seg.querySelectorAll('[data-m]')].forEach(b=>b.classList.toggle('on',b.dataset.m===S.motion));
+  /* The three motion buttons only carried a visual `on` class, so a screen reader announced all
+     three as plain buttons with no indication of which mode was active. The selected one is now
+     also published as aria-pressed, which is pure semantics: no selector in this page matches
+     [aria-pressed] on .seg button, so nothing about the paint changes. */
+  if(seg)[...seg.querySelectorAll('[data-m]')].forEach(b=>{
+    const on=b.dataset.m===S.motion;
+    b.classList.toggle('on',on);
+    b.setAttribute('aria-pressed',on?'true':'false');
+  });
   if(motionOff()){tg.x=0;tg.y=0;kick()}
   paint();
 }

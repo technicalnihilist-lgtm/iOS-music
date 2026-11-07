@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 5.3 — the Motion switch says which mode is on
+
+- The Auto / Touch / Off buttons in the settings sheet only toggled a CSS `on` class, so the accessibility tree showed three identical buttons and never which motion mode was in force; each button now carries `aria-pressed` from the same function that moves the highlight, and nothing visible changed.
+
 ### 5.2 — the playlist says which song is playing
 
 - The playing row was marked by a CSS class alone, which assistive tech never sees, so every row in the playlist announced itself identically and a TalkBack user could not tell which track the transport buttons were pointing at; the current row now carries `aria-current="true"` (and the others nothing) from both places the highlight is already written, and nothing visible changed.
