@@ -873,14 +873,14 @@ function renderList(rebuild){
   const list=$('list');
   if(!tracks.length){
     if(rebuild||listCount!==0){
-      list.innerHTML='<div class="it" role="listitem" data-add="1"><div class="tt"><b>No songs yet</b><small>Tap here to add songs</small></div></div>';
+      list.innerHTML='<div class="it" role="listitem" tabindex="0" data-add="1"><div class="tt"><b>No songs yet</b><small>Tap here to add songs</small></div></div>';
       listCount=0;
     }
     return;
   }
   /* rebuild only when the set of songs changed; a track change just moves the highlight */
   if(rebuild||listCount!==tracks.length||list.children.length!==tracks.length){
-    list.innerHTML=tracks.map((t,i)=>`<div class="it${i===idx?' cur':''}" role="listitem" data-i="${i}"><div class="th" style="--ah:${t.h}"></div><div class="tt"><b>${esc(t.t)}</b><small>${esc(t.a)}</small></div><div class="eq"><i></i><i></i><i></i></div></div>`).join('');
+    list.innerHTML=tracks.map((t,i)=>`<div class="it${i===idx?' cur':''}" role="listitem" tabindex="0" data-i="${i}"><div class="th" style="--ah:${t.h}"></div><div class="tt"><b>${esc(t.t)}</b><small>${esc(t.a)}</small></div><div class="eq"><i></i><i></i><i></i></div></div>`).join('');
     listCount=tracks.length;
     return;
   }
@@ -890,8 +890,16 @@ function renderList(rebuild){
     if(rows[i].classList.contains('cur')!==want)rows[i].classList.toggle('cur',want);
   }
 }
-$('list').onclick=e=>{
-  const r=e.target.closest('.it');if(!r)return;
+/* A playlist row is the only way to jump to a song, and it answered the pointer alone. The rows
+   were plain divs, so the tab order stepped over the whole playlist: a keyboard or switch-access
+   user could walk the transport buttons but could not select an entry at all, and the empty-state
+   row could not open the picker either - the same gap item 35 fixed on the bubble, still open on
+   every row. Each row is now a tab stop, and Enter or Space activates it through `activateRow`,
+   the one function the click handler also calls, so the two paths cannot drift apart. `tabindex`
+   adds no box and the focus ring is drawn only for `:focus-visible` (keyboard navigation), so a
+   pointer or touch user sees exactly the pixels they saw before. */
+function activateRow(r){
+  if(!r)return;
   if(r.dataset.add){$('file').click();return}
   const i=+r.dataset.i;
   if(i===idx){
@@ -901,6 +909,16 @@ $('list').onclick=e=>{
     au.paused?attemptPlay():au.pause();return;
   }
   load(i,true,i>idx?1:-1);
+}
+$('list').onclick=e=>{activateRow(e.target.closest('.it'))};
+/* Space is swallowed so it activates the row instead of scrolling the player, which is what a
+   native button would do. Enter needs no default to suppress. */
+$('list').onkeydown=e=>{
+  if(e.key!=='Enter'&&e.key!==' '&&e.key!=='Spacebar')return;
+  const r=e.target.closest&&e.target.closest('.it');
+  if(!r)return;
+  e.preventDefault();
+  activateRow(r);
 };
 
 /* Android hardware back: sheet, then player, then let the app close */
