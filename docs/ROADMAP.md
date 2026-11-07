@@ -438,9 +438,18 @@ snapshot of both builds, so nothing visible moved.
   that moves the `on` class, and the markup ships the initial state. Measured after: `true,false,false`
   on load, exactly one `true` after each of the three taps. No stylesheet selects on `[aria-pressed]`
   for `.seg button`, so the paint is unchanged.
-- [ ] 41. Adding a song throws keyboard focus out of the playlist.
+- [x] 41. Adding a song throws keyboard focus out of the playlist.
   **Symptom.** `renderList` replaces every row node when the set of files changes, so a row that
   held focus when the picker returned is destroyed under it and the browser drops focus to
   `<body>`; a keyboard or switch user is back at the top of the page and has to tab in again to
   reach the song they were on. Measured: with focus on row 1, picking one new file left
   `document.activeElement` as `BODY`.
+  **Fixed in 5.4.** The row that last held focus is remembered by its `data-i` (not by node
+  identity — the node is about to be replaced) from a `focusin` listener on the list, and the
+  rebuilt row with the same key is focused again with `preventScroll`. Focus is only taken back
+  when it was inside the list or had already fallen to `<body>`, so a user who has since moved to
+  another control keeps it; if the row is gone (the empty-state row after the first song) focus
+  lands on the row now at that position. Measured after: focus on row 1, one file added,
+  `document.activeElement` is the row with `data-i="1"`; with the same harness on the previous
+  page it was `BODY`. Rows are still reused on a track change, and the flat and tilted
+  `elementFromPoint` hit-tests are unchanged.

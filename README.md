@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 5.4 — adding a song keeps your place in the playlist
+
+- `renderList` replaced every row node when the set of songs changed, so a row that held focus was destroyed under it and the browser dropped focus to `<body>`, putting a keyboard or switch user back at the top of the page; the row that last held focus is now remembered by its index and focused again after the rebuild (with `preventScroll`, and only when focus was inside the list or had already fallen to the body), and nothing visible changed.
+
 ### 5.3 — the Motion switch says which mode is on
 
 - The Auto / Touch / Off buttons in the settings sheet only toggled a CSS `on` class, so the accessibility tree showed three identical buttons and never which motion mode was in force; each button now carries `aria-pressed` from the same function that moves the highlight, and nothing visible changed.

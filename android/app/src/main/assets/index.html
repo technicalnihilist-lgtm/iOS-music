@@ -929,20 +929,59 @@ $('file').onchange=e=>{
 };
 
 const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* Adding a song used to throw the keyboard user out of the playlist. The rebuild below replaces
+   every row node, so a row that held focus was destroyed under the focus and the browser dropped
+   it to <body>: a keyboard or switch user landed back at the top of the document and had to tab
+   in again to reach the song they had been on. The row that last held focus is remembered (by its
+   own `data-i`, not by node identity, since the node is about to be replaced) and the rebuilt row
+   with the same key is focused again, with `preventScroll` so the list does not jump. Focus is
+   only taken back when it was inside the list or had already fallen to <body> - a user who has
+   since moved to another control keeps it - and `focus()` only paints the :focus-visible ring when
+   the last input was the keyboard, so a pointer or touch user sees the same pixels as before. */
+let listFocusKey=null;
+document.addEventListener('focusin',e=>{
+  const t=e.target;
+  if(!t||!t.closest)return;
+  const r=t.closest('#list .it');
+  if(r)listFocusKey=r.dataset.add?'add':r.dataset.i;
+  else if(t!==document.body&&t.id!=='file')listFocusKey=null;   /* focus moved to a real control */
+});
+const rowKey=r=>r.dataset.add?'add':r.dataset.i;
+function focusRow(list,key){
+  const rows=list.children;
+  for(let i=0;i<rows.length;i++){
+    if(rowKey(rows[i])===key){
+      try{rows[i].focus({preventScroll:true})}catch(e){rows[i].focus()}
+      return true;
+    }
+  }
+  return false;
+}
 let listCount=-1;
 function renderList(rebuild){
   const list=$('list');
   if(!tracks.length){
     if(rebuild||listCount!==0){
+      const a=document.activeElement,key=a&&a!==document.body&&list.contains(a)?rowKey(a):null;
       list.innerHTML='<div class="it" role="listitem" tabindex="0" data-add="1"><div class="tt"><b>No songs yet</b><small>Tap here to add songs</small></div></div>';
       listCount=0;
+      if(key)focusRow(list,key);
     }
     return;
   }
   /* rebuild only when the set of songs changed; a track change just moves the highlight */
   if(rebuild||listCount!==tracks.length||list.children.length!==tracks.length){
+    const a=document.activeElement;
+    const key=a&&a!==document.body&&list.contains(a)?rowKey(a)
+      :(a===null||a===document.body)?listFocusKey:null;
     list.innerHTML=tracks.map((t,i)=>`<div class="it${i===idx?' cur':''}" role="listitem" tabindex="0" data-i="${i}"${i===idx?' aria-current="true"':''}><div class="th" style="--ah:${t.h}"></div><div class="tt"><b>${esc(t.t)}</b><small>${esc(t.a)}</small></div><div class="eq"><i></i><i></i><i></i></div></div>`).join('');
     listCount=tracks.length;
+    if(key&&!focusRow(list,key)&&list.children.length){
+      /* the exact row is gone (the empty-state row after the first song arrives); land on the
+         row that now sits at that position rather than leaving focus on <body> */
+      const i=key==='add'?0:Math.min(+key||0,list.children.length-1);
+      focusRow(list,rowKey(list.children[i]));
+    }
     return;
   }
   const rows=list.children;
