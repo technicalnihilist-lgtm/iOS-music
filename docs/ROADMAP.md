@@ -505,7 +505,7 @@ snapshot of both builds, so nothing visible moved.
   touched: picking and dedupe, the title swap on a track change, row reuse, the back chain,
   debounced settings persistence, the seek readout advancing during playback and the flat and
   tilted `elementFromPoint` hit-tests all report exactly what they did before.
-- [ ] 45. Three more places hold a second handle to a node `EL` already caches.
+- [x] 45. Three more places hold a second handle to a node `EL` already caches.
   **Symptom.** `$('file').onchange`'s "everything picked was already in the list" branch writes
   `$('title')`/`$('artist')`, `huEl.oninput` writes `$('huV')`, and the seek-bar block binds
   `const sk=$('seek')` — all four nodes are already in `EL`. `load()`'s empty-playlist branch

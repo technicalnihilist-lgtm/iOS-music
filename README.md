@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 5.8 — the seek bar, the hue readout and the empty-playlist copy use the cached nodes
+
+- `sk.oninput` bound `const sk=$('seek')` and the hue slider wrote its readout through `$('huV')`, while the "nothing new picked" branch of the file handler re-resolved `#title` and `#artist` that `load()` already writes through `EL` — the last four `getElementById` calls for nodes the startup map holds; all four now read `EL`, so each node has one write path again and nothing visible changed.
+
 ### 5.7 — the audio tick stops looking up nodes it already has
 
 - `ontimeupdate` ran on every audio tick (~4/s) and called `getElementById` for the seek bar, and for the position and duration readouts whenever their text changed; `sk.oninput` did the same for the position readout on every scrub frame, although `EL` has cached exactly those nodes since 2.2 — all four now read the cached reference, taking the measured cost of 8 ticks plus 4 scrub events from 13 `getElementById` calls to 0, and nothing visible changed.

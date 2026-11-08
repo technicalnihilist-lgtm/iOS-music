@@ -517,7 +517,7 @@ au.onloadedmetadata=showDur;
 au.ondurationchange=showDur;
 
 /* seek bar: don't let timeupdate fight the user's thumb */
-const sk=$('seek');
+const sk=EL.seek;
 /* The bar is a percentage and this handler is the only place that turns it into a media time, so
    both ends of that conversion are clamped to the media's own domain: the slider position into
    [0,100] and the resulting time into [0, duration]. A position outside the domain - a value left
@@ -788,7 +788,7 @@ if(huEl){
   huEl.oninput=()=>{
     huEl.style.setProperty('--p',(huEl.value/360*100)+'%');
     root.setProperty('--h',huEl.value);
-    $('huV').textContent=huEl.value+'°';
+    EL.huV.textContent=huEl.value+'°';
     setVT(huEl,vtOf('hu',huEl.value));
   };
 }
@@ -949,7 +949,7 @@ $('file').onchange=e=>{
   });
   closeSheet();
   if(tracks.length===first){
-    if(!tracks.length){$('title').textContent='No songs yet';$('artist').textContent='Add songs from your phone';renderList();resetSeek();}
+    if(!tracks.length){EL.title.textContent='No songs yet';EL.artist.textContent='Add songs from your phone';renderList();resetSeek();}
     return;                                /* everything picked was already in the list */
   }
   load(first,true,1);
