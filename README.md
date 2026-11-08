@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 5.7 — the audio tick stops looking up nodes it already has
+
+- `ontimeupdate` ran on every audio tick (~4/s) and called `getElementById` for the seek bar, and for the position and duration readouts whenever their text changed; `sk.oninput` did the same for the position readout on every scrub frame, although `EL` has cached exactly those nodes since 2.2 — all four now read the cached reference, taking the measured cost of 8 ticks plus 4 scrub events from 13 `getElementById` calls to 0, and nothing visible changed.
+
 ### 5.6 — the play/pause button says whether it is playing
 
 - `#pp` carried the constant accessible name "Play or pause" and no state of its own, so the only thing telling a screen reader whether the player was running or stopped was the SVG swap — paint, not meaning; the button now carries `aria-pressed`, written by a single `setPlaying()` that also owns the `playing` class and that every path painting the transport already goes through, so the attribute and the icon cannot drift apart, and nothing visible changed.

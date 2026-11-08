@@ -488,10 +488,38 @@ snapshot of both builds, so nothing visible moved.
   - the attribute equals the class at every sample, and from the settled paused state the taps give
   `false, true, false`. Picking and dedupe, the title swap on track change, row reuse, the back
   chain and the flat and tilted `elementFromPoint` hit-tests are all unchanged.
-- [ ] 44. The audio hot paths resolve their nodes by id on every tick although `EL` already caches
+- [x] 44. The audio hot paths resolve their nodes by id on every tick although `EL` already caches
   them.
   **Symptom.** `ontimeupdate` calls `$('seek')` on every tick and `$('cur')`/`$('dur')` whenever
   their text changes; `sk.oninput` and `onplay`/`onpause` do the same. Item 8 hoisted exactly these
   nodes into `EL` for `load()` and `resetSeek()`, so the hot paths are the only ones still looking
   them up. Measured: 10 `getElementById` calls over 2 s of playback (8 `timeupdate` ticks, 1.25 per
   tick) plus one per scrub frame and per play/pause.
+  **Fixed in 5.7.** The four remaining lookups on those paths now read the cached node:
+  `ontimeupdate` takes `EL.seek` instead of `$('seek')` and writes `EL.cur`/`EL.dur`, and
+  `sk.oninput` writes `EL.cur`. Measured after, with `document.getElementById` wrapped in a
+  counter: 8 dispatched `timeupdate` ticks and 4 scrub `input` events cost **0**
+  `getElementById` calls, down from 9 + 4 = 13 on the same script before the change. The
+  `onplay`/`onpause` half of the symptom had already gone away — neither handler looks anything up
+  in the shipped 5.6 page — so nothing was changed there. No markup, style or handler wiring was
+  touched: picking and dedupe, the title swap on a track change, row reuse, the back chain,
+  debounced settings persistence, the seek readout advancing during playback and the flat and
+  tilted `elementFromPoint` hit-tests all report exactly what they did before.
+- [ ] 45. Three more places hold a second handle to a node `EL` already caches.
+  **Symptom.** `$('file').onchange`'s "everything picked was already in the list" branch writes
+  `$('title')`/`$('artist')`, `huEl.oninput` writes `$('huV')`, and the seek-bar block binds
+  `const sk=$('seek')` — all four nodes are already in `EL`. `load()`'s empty-playlist branch
+  writes the same two title nodes through `EL`, so one node now has two write paths and a change
+  to one silently misses the other. Found while doing item 44: `grep -c "\$('"` on the shipped
+  page reports 33 lines carrying 50 `$()` calls, and these are the last four for nodes already in
+  the map.
+- [ ] 46. The play/pause bump re-resolves the button it is bumping.
+  **Symptom.** `restart($('pp'),'bump')` is called from the next/prev handlers, but `ppBtn` was
+  cached at startup and is the same node, so every play and every pause costs one avoidable
+  `getElementById` on a path the user hits constantly. Same shape as item 44, on the transport
+  rather than the tick.
+- [ ] 47. `renderList()` re-resolves the list container on every track change.
+  **Symptom.** `renderList` opens with `const list=$('list')` and runs on every track change, every
+  add and every delete, although nothing ever replaces `#list`. The click and keydown handlers on
+  it do the same. Item 8's map stopped at the nodes `load()` and `resetSeek()` touch, so the
+  playlist container was left out.

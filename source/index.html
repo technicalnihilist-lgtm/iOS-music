@@ -490,17 +490,17 @@ au.ontimeupdate=()=>{
     /* a stream can report a currentTime past its header duration (VBR MP3s and some WAVs do),
        which handed the bar a position outside [0, duration]; clamp it to the track's domain */
     const p=(isFinite(d)&&d>0)?Math.min(100,Math.max(0,au.currentTime/d*100)):0;
-    const sk=$('seek');
+    const sk=EL.seek;
     const ps=p+'%';
     if(tuCache.p!==ps){tuCache.p=ps;sk.style.setProperty('--p',ps)}
     const pv=Math.round(p*10)/10;      /* step="0.1": the input snaps to this either way */
     if(tuCache.v!==pv){tuCache.v=pv;sk.value=pv}
     const cs=fmt(au.currentTime);
-    if(tuCache.cur!==cs){tuCache.cur=cs;$('cur').textContent=cs;setVT(sk,cs)}
+    if(tuCache.cur!==cs){tuCache.cur=cs;EL.cur.textContent=cs;setVT(sk,cs)}
   }
   if(isFinite(d)&&d>0){
     const ds=fmt(d);
-    if(tuCache.dur!==ds){tuCache.dur=ds;$('dur').textContent=ds}
+    if(tuCache.dur!==ds){tuCache.dur=ds;EL.dur.textContent=ds}
   }
 };
 /* `au.duration` is `Infinity` for some streams and `NaN` until metadata arrives. Both used to be
@@ -535,7 +535,7 @@ sk.oninput=e=>{
     const t=Math.min(d,Math.max(0,v/100*d));
     if(isFinite(t))au.currentTime=t;
   }
-  $('cur').textContent=fmt(au.currentTime);
+  EL.cur.textContent=fmt(au.currentTime);
   setVT(e.target,fmt(au.currentTime));
 };
 ['pointerdown','touchstart'].forEach(ev=>sk.addEventListener(ev,()=>{dragging=true},{passive:true}));
