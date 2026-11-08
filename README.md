@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 5.6 — the play/pause button says whether it is playing
+
+- `#pp` carried the constant accessible name "Play or pause" and no state of its own, so the only thing telling a screen reader whether the player was running or stopped was the SVG swap — paint, not meaning; the button now carries `aria-pressed`, written by a single `setPlaying()` that also owns the `playing` class and that every path painting the transport already goes through, so the attribute and the icon cannot drift apart, and nothing visible changed.
+
 ### 5.5 — a pause right after Next is no longer swallowed
 
 - Swapping a source fires a `pause` of its own, and `au.onpause` ignored every pause for the 700 ms after a track change — so tapping pause a moment after Next, with the new track already playing, left the card painted as playing (pause icon, scaled art, animating equaliser) over silence and never told the Android shell to drop audio focus, indefinitely; a pause the page asks for now carries a mark that `au.onpause` honours whenever it lands, only an unsolicited pause inside the window is ignored, and nothing visible changed.

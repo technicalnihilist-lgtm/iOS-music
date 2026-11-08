@@ -165,7 +165,7 @@ input[type=range]{touch-action:pan-y}
   <div class="seek"><input type="range" id="seek" min="0" max="100" step="0.1" value="0" aria-label="Playback position" aria-valuetext="0:00"><div class="times"><span id="cur">0:00</span><span id="dur">0:00</span></div></div>
   <div class="row">
     <button class="ctl" id="prev" aria-label="Previous"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
-    <button class="ctl main pp" id="pp" aria-label="Play or pause"><svg class="pl" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg class="pa" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button>
+    <button class="ctl main pp" id="pp" aria-label="Play or pause" aria-pressed="false"><svg class="pl" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg class="pa" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button>
     <button class="ctl" id="next" aria-label="Next"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5l11 7L4 19z"/></svg></button>
   </div>
 <div class="lh">Playlist</div>
@@ -272,6 +272,19 @@ function setBlocked(v,msg){
   if(blocked!==v){blocked=v;app.dataset.blocked=v?'1':'0'}
   announce(msg||'');                          /* clearing the text on recovery leaves nothing stale */
 }
+/* The transport button showed whether it was playing by icon alone: the two SVGs are swapped by a
+   CSS rule, which assistive tech cannot read, so the control announced the same "Play or pause"
+   whether the player was running or stopped. aria-pressed carries that same state into the
+   accessibility tree. Every place that painted the state now goes through here, so the attribute
+   cannot drift from the class; the icons, the class name and everything on screen are unchanged. */
+const ppBtn=$('pp');
+let playing=false;
+function setPlaying(v){
+  if(playing===v)return;                      /* one write per real state change, not per event */
+  playing=v;
+  app.classList.toggle('playing',v);
+  ppBtn.setAttribute('aria-pressed',v?'true':'false');
+}
 /* One source for the "cannot play" copy. It used to be typed out at four call sites, so the
    artist line and the status message could drift apart, and a fix to the wording meant finding
    every copy. n>0 is the skip chain giving up after n failures: same visible line, a status
@@ -286,7 +299,7 @@ function playRefused(err){
   const denied=!!err&&(err.name==='NotAllowedError'||err.name==='SecurityError');
   switching=false;
   if(au.paused){
-    app.classList.remove('playing');
+    setPlaying(false);
     if('mediaSession' in navigator){try{navigator.mediaSession.playbackState='paused'}catch(e){}}
   }
   /* the skip chain already said why it stopped; the rejection that follows the same bad source
@@ -425,7 +438,7 @@ $('prev').onclick=()=>{
 };
 
 au.onplay=()=>{
-  app.classList.add('playing');
+  setPlaying(true);
   restart($('pp'),'bump');
   if('mediaSession' in navigator){try{navigator.mediaSession.playbackState='playing'}catch(e){}}
   /* the Android shell holds audio focus only while this is true; a plain browser has no GP */
@@ -443,7 +456,7 @@ au.onpause=()=>{
   if(switching&&!pauseAsked)return;
   pauseAsked=false;
   try{if(window.GP&&window.GP.setPlaying)window.GP.setPlaying(false)}catch(e){}
-  app.classList.remove('playing');
+  setPlaying(false);
   restart($('pp'),'bump');
   if('mediaSession' in navigator){try{navigator.mediaSession.playbackState='paused'}catch(e){}}
 };
@@ -465,7 +478,7 @@ au.onerror=()=>{
     fails=0;
     stopped=true;
     swapToken++;                 /* cancel a title swap still queued from the last attempt, or it lands after this message and replaces it */
-    app.classList.remove('playing');
+    setPlaying(false);
     playError(n);
   }
 };

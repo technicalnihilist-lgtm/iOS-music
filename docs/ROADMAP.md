@@ -474,11 +474,20 @@ snapshot of both builds, so nothing visible moved.
   still keeps `playing` and reports no spurious pause (`calls: [1]`), settled pause/resume, autoplay
   on Next, end-of-track advance, row reuse, dedupe, settings persistence and the flat and tilted
   `elementFromPoint` hit-tests are all unchanged.
-- [ ] 43. The play/pause button never says whether it is playing.
+- [x] 43. The play/pause button never says whether it is playing.
   **Symptom.** `#pp` carries the constant accessible name "Play or pause" and no `aria-pressed`, so
   the only thing that distinguishes the two states is the SVG swap — paint, not meaning, the same
   gap items 39 and 40 closed on the playlist row and the Motion switch. Measured: `aria-label` is
   "Play or pause" and `aria-pressed` is `null` both while playing and while paused.
+  **Fixed in 5.6.** `#pp` now carries `aria-pressed`, written by a new `setPlaying()` that also owns
+  the `playing` class, so the attribute and the icon cannot disagree. All four places that painted
+  the state (`au.onplay`, `au.onpause`, `playRefused` and the end of the skip chain) go through it,
+  and it writes only when the value actually changes. The label, the icons and every painted pixel
+  are untouched. Measured after, tapping the real button through play/pause/play/pause:
+  `[{ap:true,cls:true},{ap:true,cls:true},{ap:false,cls:false},{ap:true,cls:true},{ap:false,cls:false}]`
+  - the attribute equals the class at every sample, and from the settled paused state the taps give
+  `false, true, false`. Picking and dedupe, the title swap on track change, row reuse, the back
+  chain and the flat and tilted `elementFromPoint` hit-tests are all unchanged.
 - [ ] 44. The audio hot paths resolve their nodes by id on every tick although `EL` already caches
   them.
   **Symptom.** `ontimeupdate` calls `$('seek')` on every tick and `$('cur')`/`$('dur')` whenever
