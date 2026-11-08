@@ -439,7 +439,7 @@ $('prev').onclick=()=>{
 
 au.onplay=()=>{
   setPlaying(true);
-  restart($('pp'),'bump');
+  restart(ppBtn,'bump');
   if('mediaSession' in navigator){try{navigator.mediaSession.playbackState='playing'}catch(e){}}
   /* the Android shell holds audio focus only while this is true; a plain browser has no GP */
   try{if(window.GP&&window.GP.setPlaying)window.GP.setPlaying(true)}catch(e){}
@@ -457,7 +457,7 @@ au.onpause=()=>{
   pauseAsked=false;
   try{if(window.GP&&window.GP.setPlaying)window.GP.setPlaying(false)}catch(e){}
   setPlaying(false);
-  restart($('pp'),'bump');
+  restart(ppBtn,'bump');
   if('mediaSession' in navigator){try{navigator.mediaSession.playbackState='paused'}catch(e){}}
 };
 au.onended=()=>load(idx+1,true,1);

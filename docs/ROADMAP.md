@@ -513,11 +513,19 @@ snapshot of both builds, so nothing visible moved.
   to one silently misses the other. Found while doing item 44: `grep -c "\$('"` on the shipped
   page reports 33 lines carrying 50 `$()` calls, and these are the last four for nodes already in
   the map.
-- [ ] 46. The play/pause bump re-resolves the button it is bumping.
+- [x] 46. The play/pause bump re-resolves the button it is bumping.
   **Symptom.** `restart($('pp'),'bump')` is called from the next/prev handlers, but `ppBtn` was
   cached at startup and is the same node, so every play and every pause costs one avoidable
   `getElementById` on a path the user hits constantly. Same shape as item 44, on the transport
   rather than the tick.
+  **Fixed in 5.9.** `onplay` and `onpause` now bump `ppBtn`, the same reference `setPlaying()`
+  already writes `aria-pressed` through, so the transport has one handle again. Measured with
+  `document.getElementById` wrapped in a counter: a full play → pause → play cycle driven through
+  the real handlers cost **1** `getElementById('pp')` call before and **0** after. The bump still
+  fires on both events and `aria-pressed` still tracks the state; picking and dedupe, the title
+  swap on a track change, row reuse, the back chain and the flat and tilted `elementFromPoint`
+  hit-tests (all six controls resolving to themselves, control rects identical to the previous
+  build) report exactly what they did before.
 - [ ] 47. `renderList()` re-resolves the list container on every track change.
   **Symptom.** `renderList` opens with `const list=$('list')` and runs on every track change, every
   add and every delete, although nothing ever replaces `#list`. The click and keydown handlers on

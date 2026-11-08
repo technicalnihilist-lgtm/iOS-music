@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 5.9 — the play/pause bump uses the cached transport button
+
+- `onplay` and `onpause` both called `restart($('pp'),'bump')` although `ppBtn` has been cached since 5.6, so every play and every pause cost one avoidable `getElementById` on the path the user hits most; both now bump the cached node, taking a play → pause → play cycle from 1 `getElementById('pp')` call to 0, and nothing visible changed.
+
 ### 5.8 — the seek bar, the hue readout and the empty-playlist copy use the cached nodes
 
 - `sk.oninput` bound `const sk=$('seek')` and the hue slider wrote its readout through `$('huV')`, while the "nothing new picked" branch of the file handler re-resolved `#title` and `#artist` that `load()` already writes through `EL` — the last four `getElementById` calls for nodes the startup map holds; all four now read `EL`, so each node has one write path again and nothing visible changed.
