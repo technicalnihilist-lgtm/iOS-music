@@ -561,12 +561,21 @@ snapshot of both builds, so nothing visible moved.
   switch and with the sheet open; picking and dedupe, the title swap, row reuse (node identity), the
   back chain, debounced settings persistence and the flat and tilted `elementFromPoint` hit-tests
   (all six controls resolving to themselves) report what they did before.
-- [ ] 49. The two paths that stop playback without a pause event never tell the Android shell.
+- [x] 49. The two paths that stop playback without a pause event never tell the Android shell.
   **Symptom.** `au.onpause` calls `window.GP.setPlaying(false)` so the shell can abandon audio
   focus, but `playRefused()` and the give-up branch of `au.onerror` call `setPlaying(false)` alone.
   A track that errors mid-play leaves the page showing "play" while the shell still holds focus and
   its notification still says playing. Measured with a stubbed `window.GP`: a user pause records
   `[false]`, the same stop caused by an error records `[]`.
+  **Fixed in 6.2.** The four `window.GP.setPlaying` writes were typed out at each call site, so the
+  two paths that stop without a pause event simply did not have one. They now go through
+  `setShellPlaying(v)`, which `onplay`, `onpause`, `playRefused()` and the give-up branch of
+  `au.onerror` all call, so every start and every stop reaches the shell by the same route.
+  Measured with a stubbed `window.GP` on the shipped page: a user pause records `[false]`, a
+  refused play records `[false]` where it recorded `[]`, and the skip chain giving up records
+  `[false]` where it recorded `[]`; a play still records `[true]`. Picking and dedupe, the title
+  swap, row reuse (node identity), the back chain and the flat and tilted `elementFromPoint`
+  hit-tests (all six controls resolving to themselves) report what they did before.
 - [ ] 50. Three per-press `getElementById` calls on paths a cached node could serve.
   **Symptom.** Tapping the empty-state row costs 1 `getElementById('file')`, tapping play on an
   empty playlist costs 2 (`#pp` and `#file`), and each media-session next/previous press costs 1 for

@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 6.2 — every stop tells the Android shell, not just a pause
+
+- `playRefused()` and the give-up branch of `au.onerror` called `setPlaying(false)` alone, so a track that was refused or skipped out left the page showing "play" while the shell still held audio focus and its notification still said playing; the four `window.GP.setPlaying` writes are now one `setShellPlaying()` that `onplay`, `onpause` and both of those stops call, taking a stop caused by an error from 0 shell calls to 1, and nothing visible changed.
+
 ### 6.1 — the now-playing block is painted when the skip chain gives up
 
 - the give-up branch of `au.onerror` bumped `swapToken` to keep a queued title swap from landing over its error message, but that queued run also carried the artist, the artwork hue, the colour slider and the playlist, so a track that failed before its 360 ms swap left the block showing the previous state — picking one unplayable file into an empty player still read "No songs yet" with the "Tap here to add songs" row in the playlist; the paint is now `paintTrack(t)` and the give-up branch calls it for the track it gave up on, so the header names that file and its row renders, and nothing visible changed on any path that plays.

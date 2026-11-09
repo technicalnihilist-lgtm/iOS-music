@@ -286,6 +286,15 @@ function setPlaying(v){
   app.classList.toggle('playing',v);
   ppBtn.setAttribute('aria-pressed',v?'true':'false');
 }
+/* The Android shell holds audio focus only while this is true; a plain browser has no GP. Every
+   path that starts or stops playback goes through here. It used to be written out at each call
+   site, and the two stops that fire no pause event - a refused play, and the skip chain giving up
+   on a run of unplayable tracks - only painted the page: the shell kept audio focus and its
+   notification still said playing, so the next app that asked for focus was ducked for nothing.
+   Nothing on screen is involved. */
+function setShellPlaying(v){
+  try{if(window.GP&&window.GP.setPlaying)window.GP.setPlaying(v)}catch(e){}
+}
 /* One source for the "cannot play" copy. It used to be typed out at four call sites, so the
    artist line and the status message could drift apart, and a fix to the wording meant finding
    every copy. n>0 is the skip chain giving up after n failures: same visible line, a status
@@ -301,6 +310,7 @@ function playRefused(err){
   switching=false;
   if(au.paused){
     setPlaying(false);
+    setShellPlaying(false);
     if('mediaSession' in navigator){try{navigator.mediaSession.playbackState='paused'}catch(e){}}
   }
   /* the skip chain already said why it stopped; the rejection that follows the same bad source
@@ -435,8 +445,7 @@ au.onplay=()=>{
   setPlaying(true);
   restart(ppBtn,'bump');
   if('mediaSession' in navigator){try{navigator.mediaSession.playbackState='playing'}catch(e){}}
-  /* the Android shell holds audio focus only while this is true; a plain browser has no GP */
-  try{if(window.GP&&window.GP.setPlaying)window.GP.setPlaying(true)}catch(e){}
+  setShellPlaying(true);
 };
 au.onpause=()=>{
   /* A source swap fires a pause of its own, and that one must not be painted as the user's: it
@@ -449,7 +458,7 @@ au.onpause=()=>{
      one inside the window is ignored. */
   if(switching&&!pauseAsked)return;
   pauseAsked=false;
-  try{if(window.GP&&window.GP.setPlaying)window.GP.setPlaying(false)}catch(e){}
+  setShellPlaying(false);
   setPlaying(false);
   restart(ppBtn,'bump');
   if('mediaSession' in navigator){try{navigator.mediaSession.playbackState='paused'}catch(e){}}
@@ -474,6 +483,7 @@ au.onerror=()=>{
     swapToken++;                 /* cancel a title swap still queued from the last attempt, or it lands after this message and replaces it */
     if(tracks[idx])paintTrack(tracks[idx]);   /* ...but paint the block now, so it names the track this gave up on */
     setPlaying(false);
+    setShellPlaying(false);
     playError(n);
   }
 };
