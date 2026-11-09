@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 6.3 — three per-press lookups become cached nodes
+
+- the empty-state row, a transport press with nothing loaded and the media-session next/previous handlers each re-resolved `#file`, `#next` or `#prev` on every press although none of those nodes is ever replaced; they now read one startup reference each, taking those presses from 1-2 `getElementById` calls to 0, and nothing visible changed.
+
 ### 6.2 — every stop tells the Android shell, not just a pause
 
 - `playRefused()` and the give-up branch of `au.onerror` called `setPlaying(false)` alone, so a track that was refused or skipped out left the page showing "play" while the shell still held audio focus and its notification still said playing; the four `window.GP.setPlaying` writes are now one `setShellPlaying()` that `onplay`, `onpause` and both of those stops call, taking a stop caused by an error from 0 shell calls to 1, and nothing visible changed.
