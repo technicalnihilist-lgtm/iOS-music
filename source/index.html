@@ -235,6 +235,12 @@ const EL={
   list:$('list')
 };
 const au=$('au'),app=$('app'),sheet=$('sheet'),scrim=$('scrim'),bubble=$('bubble');
+/* The picker and the two skip buttons are never replaced either, but three paths looked one of
+   them up again on every press: the empty-state row and a transport press with nothing loaded
+   each did `getElementById('file')`, and the media-session next/previous handlers did
+   `getElementById('next')`/`('prev')` to reach the button they click. That is a document lookup
+   per tap for a node that has not moved since the page loaded. Resolved once here instead. */
+const fileInput=$('file'),nextBtn=$('next'),prevBtn=$('prev');
 const N={C4:261.6,D4:293.7,E4:329.6,F4:349.2,G4:392,A4:440,B4:493.9,C5:523.3,D5:587.3,E5:659.3};
 const tracks=[];
 /* Every object URL this page creates is owned here, so the blobs can be released on teardown. */
@@ -434,10 +440,10 @@ function load(i,autoplay,dir){
 /* Every deliberate pause goes through here, so `onpause` can tell the user's pause apart from the
    one swapping a source fires (see the guard there). */
 function requestPause(){pauseAsked=true;au.pause()}
-$('pp').onclick=()=>{if(!tracks.length){$('file').click();return}au.paused?attemptPlay():requestPause()};
-$('next').onclick=()=>{if(!tracks.length){$('file').click();return}load(idx+1,!au.paused||au.ended,1)};
-$('prev').onclick=()=>{
-  if(!tracks.length){$('file').click();return}
+ppBtn.onclick=()=>{if(!tracks.length){fileInput.click();return}au.paused?attemptPlay():requestPause()};
+nextBtn.onclick=()=>{if(!tracks.length){fileInput.click();return}load(idx+1,!au.paused||au.ended,1)};
+prevBtn.onclick=()=>{
+  if(!tracks.length){fileInput.click();return}
   au.currentTime>3?(au.currentTime=0):load(idx-1,!au.paused,-1);
 };
 
@@ -923,7 +929,7 @@ if(artBox){
 applyS();
 
 /* own songs */
-$('addBtn').onclick=()=>$('file').click();
+$('addBtn').onclick=()=>fileInput.click();
 $('file').onchange=e=>{
   /* A cancelled picker does not always deliver an empty FileList: the Android WebView reports a
      back-out as `files === null`, and spreading that threw an uncaught TypeError every time the
@@ -1062,7 +1068,7 @@ function renderList(rebuild){
    pointer or touch user sees exactly the pixels they saw before. */
 function activateRow(r){
   if(!r)return;
-  if(r.dataset.add){$('file').click();return}
+  if(r.dataset.add){fileInput.click();return}
   const i=+r.dataset.i;
   if(i===idx){
     /* this row's source was assigned a moment ago: a repeat tap in the same burst, not a request
@@ -1096,8 +1102,8 @@ load(0,false);
 restart(app,'in');
 if('mediaSession' in navigator){
   const bind=(a,fn)=>{try{navigator.mediaSession.setActionHandler(a,fn)}catch(e){}};
-  bind('nexttrack',()=>$('next').click());
-  bind('previoustrack',()=>$('prev').click());
+  bind('nexttrack',()=>nextBtn.click());
+  bind('previoustrack',()=>prevBtn.click());
   bind('play',()=>attemptPlay());
   bind('pause',()=>requestPause());
 }
