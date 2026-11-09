@@ -576,8 +576,24 @@ snapshot of both builds, so nothing visible moved.
   `[false]` where it recorded `[]`; a play still records `[true]`. Picking and dedupe, the title
   swap, row reuse (node identity), the back chain and the flat and tilted `elementFromPoint`
   hit-tests (all six controls resolving to themselves) report what they did before.
-- [ ] 50. Three per-press `getElementById` calls on paths a cached node could serve.
+- [x] 50. Three per-press `getElementById` calls on paths a cached node could serve.
   **Symptom.** Tapping the empty-state row costs 1 `getElementById('file')`, tapping play on an
   empty playlist costs 2 (`#pp` and `#file`), and each media-session next/previous press costs 1 for
   the transport button it clicks. None of those nodes is ever replaced. Measured with
   `document.getElementById` wrapped in a counter on the shipped 6.0 page.
+  **Fixed in 6.3.** The picker and the two skip buttons are now resolved once at startup into
+  `fileInput`, `nextBtn` and `prevBtn`, beside the `ppBtn` reference the transport already had.
+  Four call sites read them: the empty-state row and the three transport handlers take
+  `fileInput.click()` instead of `$('file').click()`, and the media-session handlers click
+  `nextBtn`/`prevBtn` instead of looking the button up first. Re-measured with
+  `document.getElementById` wrapped in a counter on the shipped page, one press at a time: the
+  empty-state row went from `{file:1}` to `{}`, play on an empty playlist from `{file:1}` to `{}`
+  (the `#pp` half of the 6.0 figure had already gone with the cached `ppBtn`), and each
+  media-session next/previous press from `{next:1,file:1}` and `{prev:1,file:1}` to `{}` - the
+  handler's click still runs and still loads the next track, it just no longer costs a document
+  lookup on the way. Nothing on screen is involved: picking and dedupe, the title swap, row reuse
+  (node identity), `aria-current`, the debounced settings write, the back chain and the flat and
+  tilted `elementFromPoint` hit-tests (all six controls resolving to themselves) report what they
+  did before, and the geometry and computed style of `#app`, `#art`, `#title`, `#artist`, `#seek`,
+  `#pp`, `#next`, `#prev`, `#closeBtn`, `#optBtn`, `#list`, `.lh` and `.times` are byte-identical
+  to the previous build.
