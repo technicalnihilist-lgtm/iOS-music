@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 6.0 — the playlist container is resolved once, not on every track change
+
+- `renderList()` opened with `const list=$('list')` and ran on every track change, every add and every delete, and the `click`/`keydown` handlers on the same element re-resolved it too, although nothing ever replaces `#list`; the container now lives in the `EL` map as `EL.list` and all three read that one reference, taking a track switch from 1 `getElementById('list')` call to 0, and nothing visible changed.
+
 ### 5.9 — the play/pause bump uses the cached transport button
 
 - `onplay` and `onpause` both called `restart($('pp'),'bump')` although `ppBtn` has been cached since 5.6, so every play and every pause cost one avoidable `getElementById` on the path the user hits most; both now bump the cached node, taking a play → pause → play cycle from 1 `getElementById('pp')` call to 0, and nothing visible changed.

@@ -526,8 +526,16 @@ snapshot of both builds, so nothing visible moved.
   swap on a track change, row reuse, the back chain and the flat and tilted `elementFromPoint`
   hit-tests (all six controls resolving to themselves, control rects identical to the previous
   build) report exactly what they did before.
-- [ ] 47. `renderList()` re-resolves the list container on every track change.
+- [x] 47. `renderList()` re-resolves the list container on every track change.
   **Symptom.** `renderList` opens with `const list=$('list')` and runs on every track change, every
   add and every delete, although nothing ever replaces `#list`. The click and keydown handlers on
   it do the same. Item 8's map stopped at the nodes `load()` and `resetSeek()` touch, so the
   playlist container was left out.
+  **Fixed in 6.0.** `#list` joined the startup map as `EL.list`, and `renderList` plus both of its
+  delegated handlers (`click`, `keydown`) now read that one reference, so the playlist container
+  has a single handle again. Measured with `document.getElementById` wrapped in a counter: one
+  track switch driven through the real row handler cost **1** `getElementById('list')` call before
+  and **0** after. Picking and dedupe, the title swap on a track change, row reuse (node identity),
+  the `cur`/`aria-current` pair, the back chain, debounced settings persistence and the flat and
+  tilted `elementFromPoint` hit-tests (all six controls resolving to themselves) report exactly
+  what they did before.
