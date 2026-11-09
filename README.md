@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 6.1 — the now-playing block is painted when the skip chain gives up
+
+- the give-up branch of `au.onerror` bumped `swapToken` to keep a queued title swap from landing over its error message, but that queued run also carried the artist, the artwork hue, the colour slider and the playlist, so a track that failed before its 360 ms swap left the block showing the previous state — picking one unplayable file into an empty player still read "No songs yet" with the "Tap here to add songs" row in the playlist; the paint is now `paintTrack(t)` and the give-up branch calls it for the track it gave up on, so the header names that file and its row renders, and nothing visible changed on any path that plays.
+
 ### 6.0 — the playlist container is resolved once, not on every track change
 
 - `renderList()` opened with `const list=$('list')` and ran on every track change, every add and every delete, and the `click`/`keydown` handlers on the same element re-resolved it too, although nothing ever replaces `#list`; the container now lives in the `EL` map as `EL.list` and all three read that one reference, taking a track switch from 1 `getElementById('list')` call to 0, and nothing visible changed.

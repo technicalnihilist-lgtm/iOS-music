@@ -539,3 +539,36 @@ snapshot of both builds, so nothing visible moved.
   the `cur`/`aria-current` pair, the back chain, debounced settings persistence and the flat and
   tilted `elementFromPoint` hit-tests (all six controls resolving to themselves) report exactly
   what they did before.
+
+- [x] 48. The skip chain's give-up branch cancels the pending title and playlist paint, so the
+  now-playing block keeps whatever the last successful paint left there.
+  **Symptom.** `load()` paints the title, artist, artwork hue, colour slider and playlist 360 ms
+  later inside the swap animation, and the give-up branch of `au.onerror` bumps `swapToken` to stop
+  that queued run landing over its error message - but the queue carried the whole paint, not just
+  the title. A run of unplayable files therefore left the block stale, and picking one unplayable
+  file into an empty player left the startup state on screen: the title read "No songs yet" and the
+  playlist still showed the "Tap here to add songs" row, over a track that was in `tracks` and
+  highlighted nowhere (`cur: -1`). Reproduced by picking a corrupt WAV as the only file.
+  **Fixed in 6.1.** The paint is now `paintTrack(t)`, called from `load()`'s `ui()` exactly as
+  before, and the give-up branch calls it for the track it gave up on before `playError()` replaces
+  the artist line, so the header names the file that failed and the playlist renders its row with
+  `aria-current`. The token bump stays, so a stale swap still cannot land afterwards. Measured on
+  the shipped page: one unplayable file picked into an empty player now reports
+  `{title:"BrokenSong", artist:"Can't play this file", rows:1, addRow:false, cur:0}` where it
+  reported `{title:"No songs yet", rows:1, addRow:true, cur:-1}` before. Geometry and computed style
+  of `#app`, `#art`, `#title`, `#artist`, `#seek`, `#pp`, `#next`, `#prev`, `#closeBtn`, `#optBtn`,
+  `#list`, `.lh` and `.times` are identical to the previous build after picking, after a track
+  switch and with the sheet open; picking and dedupe, the title swap, row reuse (node identity), the
+  back chain, debounced settings persistence and the flat and tilted `elementFromPoint` hit-tests
+  (all six controls resolving to themselves) report what they did before.
+- [ ] 49. The two paths that stop playback without a pause event never tell the Android shell.
+  **Symptom.** `au.onpause` calls `window.GP.setPlaying(false)` so the shell can abandon audio
+  focus, but `playRefused()` and the give-up branch of `au.onerror` call `setPlaying(false)` alone.
+  A track that errors mid-play leaves the page showing "play" while the shell still holds focus and
+  its notification still says playing. Measured with a stubbed `window.GP`: a user pause records
+  `[false]`, the same stop caused by an error records `[]`.
+- [ ] 50. Three per-press `getElementById` calls on paths a cached node could serve.
+  **Symptom.** Tapping the empty-state row costs 1 `getElementById('file')`, tapping play on an
+  empty playlist costs 2 (`#pp` and `#file`), and each media-session next/previous press costs 1 for
+  the transport button it clicks. None of those nodes is ever replaced. Measured with
+  `document.getElementById` wrapped in a counter on the shipped 6.0 page.

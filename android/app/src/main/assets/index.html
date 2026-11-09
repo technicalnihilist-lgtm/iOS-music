@@ -393,14 +393,7 @@ function load(i,autoplay,dir){
   }
   idx=n;
   const t=tracks[idx];
-  const ui=()=>{
-    EL.title.textContent=t.t;EL.artist.textContent=t.a;
-    EL.art.style.setProperty('--ah',t.h);
-    document.documentElement.style.setProperty('--h',t.h);
-    EL.hu.value=t.h;EL.huV.textContent=t.h+'°';setVT(EL.hu,vtOf('hu',t.h));
-    EL.hu.style.setProperty('--p',(t.h/360*100)+'%');
-    renderList();
-  };
+  const ui=()=>paintTrack(t);
   if(dir){
     [EL.art,EL.meta].forEach(el=>{el.style.setProperty('--d',dir);restart(el,'swap')});
     const token=++swapToken;
@@ -479,6 +472,7 @@ au.onerror=()=>{
     fails=0;
     stopped=true;
     swapToken++;                 /* cancel a title swap still queued from the last attempt, or it lands after this message and replaces it */
+    if(tracks[idx])paintTrack(tracks[idx]);   /* ...but paint the block now, so it names the track this gave up on */
     setPlaying(false);
     playError(n);
   }
@@ -986,6 +980,25 @@ function focusRow(list,key){
   return false;
 }
 let listCount=-1;
+/* Everything the now-playing block shows for one track: the title and artist, the artwork hue, the
+   colour-shift slider that is tied to that hue, and the playlist highlight. `load()` used to own
+   this as a closure and run it either immediately or, for a track change, 360 ms later inside the
+   swap animation. The skip chain's give-up branch cancelled that queued run to stop a stale title
+   landing over its error message - but the queue also carried this whole paint, so a run of
+   unplayable files left the header and the playlist showing whatever the last successful paint
+   had put there. With one unplayable file picked into an empty player that was the startup state:
+   the title read "No songs yet" and the playlist still showed the "Tap here to add songs" row,
+   over a track that was in `tracks`. The paint is now a function both paths can call, and the
+   give-up branch calls it for the track it gave up on, so the block names the file that failed
+   before the error line replaces the artist. */
+function paintTrack(t){
+  EL.title.textContent=t.t;EL.artist.textContent=t.a;
+  EL.art.style.setProperty('--ah',t.h);
+  document.documentElement.style.setProperty('--h',t.h);
+  EL.hu.value=t.h;EL.huV.textContent=t.h+'°';setVT(EL.hu,vtOf('hu',t.h));
+  EL.hu.style.setProperty('--p',(t.h/360*100)+'%');
+  renderList();
+}
 function renderList(rebuild){
   const list=EL.list;
   if(!tracks.length){
