@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 6.7 — a settings drag stops rewriting the depth properties it does not touch
+
+- `applyS()` wrote `--glass`, `--blur`, `--tiltk` and `--park` on `:root` on every frame of every slider drag without checking whether the value had changed, so dragging Shadow re-blurred the card 20 times for nothing; each value last written is now remembered and a write is skipped when it would repeat, taking 20 Shadow-slider events from 80 root `setProperty` calls to 0 and 10 Blur-slider events from 40 to 10, and nothing visible changed.
+
 ### 6.6 — the unused note-frequency table is gone
 
 - a ten-entry `const N={C4:261.6,...,E5:659.3}` note-frequency table sat beside the constants and `N` was read nowhere else in the page, so it was dead weight in the file that ships inside the APK; the declaration is deleted, taking the page from 66,224 to 66,127 bytes, and nothing visible changed.

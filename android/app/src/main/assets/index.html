@@ -760,11 +760,21 @@ function paint(){
   if(vglow!==pglow){pglow=vglow;root.setProperty('--glow',vglow)}
 }
 
+/* The four global depth properties, and the value last written for each; undefined means "not yet
+   written". `applyS()` is the settings applier and every slider's `input` handler calls it, so a
+   drag runs it once per frame - and three of these four belong to a slider the drag is not
+   touching. Each was written unconditionally, so dragging Shadow rewrote `--blur` and `--glass`,
+   the two properties `backdrop-filter` on the card and the sheet resolve against, to the value they
+   already held. Compared and skipped the same way `paint()` above already guards its own eight.
+   Nothing else in the page writes these four, so the cache cannot go stale. */
+let pglass,pblur,ptiltk,ppark;
 function applyS(){
-  root.setProperty('--glass',S.glass/100);
-  root.setProperty('--blur',S.blur+'px');
-  root.setProperty('--tiltk',(S.tilt/100).toFixed(3));
-  root.setProperty('--park',(S.par/100).toFixed(3));
+  const vg=''+(S.glass/100),vb=S.blur+'px',
+        vt=(S.tilt/100).toFixed(3),vp=(S.par/100).toFixed(3);
+  if(vg!==pglass){pglass=vg;root.setProperty('--glass',vg)}
+  if(vb!==pblur){pblur=vb;root.setProperty('--blur',vb)}
+  if(vt!==ptiltk){ptiltk=vt;root.setProperty('--tiltk',vt)}
+  if(vp!==ppark){ppark=vp;root.setProperty('--park',vp)}
   if(driftEl)driftEl.classList.toggle('off',!S.drift);
   if(driftBtn)driftBtn.setAttribute('aria-pressed',S.drift?'true':'false');
   /* The three motion buttons only carried a visual `on` class, so a screen reader announced all

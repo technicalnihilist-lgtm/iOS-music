@@ -649,3 +649,48 @@ snapshot of both builds, so nothing visible moved.
   write, the back chain (`true`, `true`, `false`) and the flat and tilted `elementFromPoint`
   hit-tests (all six controls resolving to themselves) report exactly what the 6.5 page reports,
   the two pages run side by side in headless Chromium.
+
+## Backlog added after the 53 items above were cleared
+
+- [x] 54. A settings drag rewrote all four global depth properties on `:root` on every frame,
+  including the ones the slider being dragged does not touch.
+  **Symptom.** `applyS()` is the settings applier and every slider's `input` handler calls it, so a
+  drag runs it once per frame. It wrote `--glass`, `--blur`, `--tiltk` and `--park` unconditionally,
+  with no comparison against the value already on the element - unlike `paint()` beside it, which
+  remembers what it last wrote. Measured with `CSSStyleDeclaration.prototype.setProperty` wrapped in
+  a counter on the shipped 6.6 page, 20 `input` events on the Shadow slider - a slider that feeds
+  none of those four properties - cost 80 root `setProperty` calls carrying exactly 4 distinct
+  values, so all 80 rewrote a value that had not changed; 10 events on the Blur slider cost 40 calls,
+  30 of them no-ops. `--glass` and `--blur` are what `backdrop-filter` on the card and the sheet
+  resolve against, so dragging Shadow re-blurred the glass 20 times for nothing.
+  **Fixed in 6.7.** The value last written for each of the four is remembered in `pglass`, `pblur`,
+  `ptiltk` and `ppark`, and `applyS()` writes a property only when the value it is about to write
+  differs from the one already on the element - the same guard `paint()` has always used for its
+  own eight. Nothing else in the page writes these four, so the cache cannot go stale, and every
+  write that does happen still carries exactly the value it carried before. Re-measured the same
+  20 Shadow-slider events on the shipped page: 80 root `setProperty` calls -> 0, and the same 10
+  Blur-slider events: 40 -> 10, now one write per real change of `--blur` and nothing else. The
+  computed `--glass`, `--blur`, `--tiltk` and `--park` after every slider, `Reset defaults` and a
+  restored session are unchanged. Picking and dedupe (3 rows, a repeat pick leaves 3), the title
+  swap (`a` -> `b`), row reuse (node identity across a skip), `aria-current`, the debounced settings
+  write, the back chain (`true`, `true`, `false`) and the flat and tilted `elementFromPoint`
+  hit-tests (all six controls resolving to themselves) report what they did before, and the geometry
+  and computed style of `#app`, `#art`, `#title`, `#artist`, `#seek`, `#pp`, `#next`, `#prev`,
+  `#closeBtn`, `#optBtn`, `#list`, `.lh` and `.times` - 13 elements x 17 properties, at startup,
+  with the sheet open and after a drag, sampled with the decorative animations frozen and the depth
+  spring parked at rest - are byte-identical to the 6.6 page.
+- [ ] 55. The idle-sway animation on `.drift` kept running while the player was collapsed to the
+  bubble and while the page was hidden.
+  **Symptom.** `syncBlobs()` freezes the three backdrop blobs in both states, but `.drift` - the
+  wrapper that carries the 17s `sway` loop around the whole card - was never included, so it kept an
+  animation live over a subtree whose only child is `display:none` once the player is collapsed.
+  Measured on the shipped 6.6 page with `getAnimations()` on `.drift`: `running` after `#closeBtn`
+  collapses the player, while the three `.blobs i` children correctly report `paused`.
+- [ ] 56. `load()` started a fresh 700 ms `switching` timer on every call and never cleared the
+  previous one.
+  **Symptom.** The timer exists to clear `switching` once a source swap's queued pause event has
+  landed, but overlapping loads - the bounded skip chain walks up to three tracks, and rapid Next
+  taps stack on top - each left their own timer alive, so an earlier timer fires while a later load
+  is still settling and clears `switching` under it. Measured with `window.setTimeout` wrapped in a
+  counter on the shipped 6.6 page: one pick leaves 2 live 700 ms timers, one skip takes it to 4, two
+  more to 5.
