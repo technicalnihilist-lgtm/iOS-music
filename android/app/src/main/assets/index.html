@@ -241,6 +241,11 @@ const au=$('au'),app=$('app'),sheet=$('sheet'),scrim=$('scrim'),bubble=$('bubble
    `getElementById('next')`/`('prev')` to reach the button they click. That is a document lookup
    per tap for a node that has not moved since the page loaded. Resolved once here instead. */
 const fileInput=$('file'),nextBtn=$('next'),prevBtn=$('prev');
+/* The sheet's opener is the one control the sheet itself writes to: both of its transitions set
+   `aria-expanded` on it. `openSheet()` and `closeSheet()` looked it up again on every transition -
+   two document lookups for one open plus one close - although the node has not moved since the page
+   loaded. Resolved once here instead, beside the picker and the two skip buttons. */
+const optBtn=$('optBtn');
 const N={C4:261.6,D4:293.7,E4:329.6,F4:349.2,G4:392,A4:440,B4:493.9,C5:523.3,D5:587.3,E5:659.3};
 const tracks=[];
 /* Every object URL this page creates is owned here, so the blobs can be released on teardown. */
@@ -611,27 +616,27 @@ let sheetTimer=null;
    `preventScroll` keeps the restore from scrolling the page, and `focus()` on a button only paints
    the :focus-visible ring when the last input was the keyboard, so a pointer or touch user sees
    the same pixels as before. */
-let sheetFocus=$('optBtn');   /* the sheet's only opener: the fallback when nothing held focus */
+let sheetFocus=optBtn;   /* the sheet's only opener: the fallback when nothing held focus */
 function openSheet(){
   if(sheetTimer){clearTimeout(sheetTimer);sheetTimer=null}  /* reopen mid-close: cancel the hide */
   const a=document.activeElement;                            /* keep the previous opener if this one has none */
   if(a&&a!==document.body&&!sheet.contains(a))sheetFocus=a;
   sheet.classList.remove('out');sheet.classList.add('show');restart(sheet,'in');
   scrim.classList.add('on');
-  $('optBtn').setAttribute('aria-expanded','true');
+  optBtn.setAttribute('aria-expanded','true');
 }
 function closeSheet(restoreFocus=true){
   if(!sheet.classList.contains('show')||sheet.classList.contains('out'))return;
   if(sheetTimer){clearTimeout(sheetTimer);sheetTimer=null}
   const a=document.activeElement,had=a===null||a===document.body||sheet.contains(a);
   sheet.classList.remove('in');sheet.classList.add('out');scrim.classList.remove('on');
-  $('optBtn').setAttribute('aria-expanded','false');
+  optBtn.setAttribute('aria-expanded','false');
   sheetTimer=setTimeout(()=>{sheetTimer=null;sheet.classList.remove('show','out')},420);
   if(restoreFocus&&had&&sheetFocus&&document.contains(sheetFocus)){
     try{sheetFocus.focus({preventScroll:true})}catch(e){sheetFocus.focus()}
   }
 }
-$('optBtn').onclick=openSheet;$('doneBtn').onclick=()=>closeSheet();scrim.onclick=()=>closeSheet();
+optBtn.onclick=openSheet;$('doneBtn').onclick=()=>closeSheet();scrim.onclick=()=>closeSheet();
 /* The sheet is a modal dialog, but Tab used to walk straight out of it: past `Reset defaults` the
    next Tab landed on the player's own controls behind the scrim, so a keyboard or switch user
    could operate the page the sheet was covering while the sheet stayed open, and the only way
