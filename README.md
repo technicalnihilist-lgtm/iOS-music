@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 6.6 — the unused note-frequency table is gone
+
+- a ten-entry `const N={C4:261.6,...,E5:659.3}` note-frequency table sat beside the constants and `N` was read nowhere else in the page, so it was dead weight in the file that ships inside the APK; the declaration is deleted, taking the page from 66,224 to 66,127 bytes, and nothing visible changed.
+
 ### 6.5 — the settings sheet stops looking up its own opener
 
 - `openSheet()` and `closeSheet()` each re-resolved `#optBtn` with `getElementById` to write `aria-expanded` on it, although the node has not moved since the page loaded; it is now one startup reference, taking one open plus one close from 2 lookups to 0, and nothing visible changed.
