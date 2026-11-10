@@ -636,7 +636,16 @@ snapshot of both builds, so nothing visible moved.
   `#art`, `#title`, `#artist`, `#seek`, `#pp`, `#next`, `#prev`, `#closeBtn`, `#optBtn`, `#list`,
   `.lh` and `.times` are identical to the previous build at startup, with the sheet open and after
   two open/close cycles.
-- [ ] 53. A ten-entry note-frequency table is declared and never used.
+- [x] 53. A ten-entry note-frequency table is declared and never used.
   **Symptom.** `const N={C4:261.6,D4:293.7,...,E5:659.3}` sits beside the other constants, and the
   identifier `N` appears nowhere else in the page: it is dead weight in the file that ships inside
   the APK, and it reads as if something plays a note.
+  **Fixed in 6.6.** The declaration is deleted. It was one line of 97 bytes, and `N` occurred
+  exactly once in the page - at the declaration itself, never read, written or passed anywhere - so
+  removing it leaves no dangling reference; the page that ships inside the APK goes from 66,224 to
+  66,127 bytes and the extracted script still passes `node --check`. Nothing executes the table, so
+  nothing on screen is involved: picking and dedupe (a repeat pick still leaves the list at 3 rows),
+  the title swap, row reuse (node identity across a skip), `aria-current`, the debounced settings
+  write, the back chain (`true`, `true`, `false`) and the flat and tilted `elementFromPoint`
+  hit-tests (all six controls resolving to themselves) report exactly what the 6.5 page reports,
+  the two pages run side by side in headless Chromium.
