@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 6.4 — a slider drag stops repainting the motion segment
+
+- `applyS()` runs on every `input` of a slider drag and each run re-resolved `#mot` and rewrote all three motion buttons, so 60 events on the Blur slider cost 120 `getElementById` calls and 360 class/attribute writes on buttons a slider cannot change; the segment is now resolved once and repainted only when the mode actually moves, and each slider's readout is held rather than looked up, taking the same drag to 0 and 0, and nothing visible changed.
+
 ### 6.3 — three per-press lookups become cached nodes
 
 - the empty-state row, a transport press with nothing loaded and the media-session next/previous handlers each re-resolved `#file`, `#next` or `#prev` on every press although none of those nodes is ever replaced; they now read one startup reference each, taking those presses from 1-2 `getElementById` calls to 0, and nothing visible changed.

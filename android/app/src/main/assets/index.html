@@ -729,6 +729,11 @@ const motionOff=()=>REDUCED||S.motion==='off';
 
 const driftEl=document.querySelector('.drift');
 const driftBtn=$('driftBtn');
+/* The motion segment's three buttons are never replaced, and the mode they show only changes when
+   the user picks one. Resolved once here, with the mode last painted, so applyS() can skip the
+   repaint when nothing it depends on has moved (see the note there). */
+const segEl=$('mot'),segBtns=segEl?[...segEl.querySelectorAll('[data-m]')]:[];
+let segMode=null;
 
 /* last value written for each depth property; undefined means "not yet written" */
 let pmx,pmy,plx,ply,pshx,pshy,pshb,pglow;
@@ -758,36 +763,49 @@ function applyS(){
   root.setProperty('--park',(S.par/100).toFixed(3));
   if(driftEl)driftEl.classList.toggle('off',!S.drift);
   if(driftBtn)driftBtn.setAttribute('aria-pressed',S.drift?'true':'false');
-  const seg=$('mot');
   /* The three motion buttons only carried a visual `on` class, so a screen reader announced all
      three as plain buttons with no indication of which mode was active. The selected one is now
      also published as aria-pressed, which is pure semantics: no selector in this page matches
-     [aria-pressed] on .seg button, so nothing about the paint changes. */
-  if(seg)[...seg.querySelectorAll('[data-m]')].forEach(b=>{
-    const on=b.dataset.m===S.motion;
-    b.classList.toggle('on',on);
-    b.setAttribute('aria-pressed',on?'true':'false');
-  });
+     [aria-pressed] on .seg button, so nothing about the paint changes.
+     This runs on every `input` of a slider drag, and a slider cannot change the motion mode - but
+     each frame re-resolved #mot, re-queried its three buttons and rewrote all six of their
+     class/attribute values for nothing. The mode last painted is remembered instead, so a drag
+     that leaves the mode alone leaves the segment alone; picking a mode still repaints it once. */
+  if(S.motion!==segMode){
+    segMode=S.motion;
+    segBtns.forEach(b=>{
+      const on=b.dataset.m===S.motion;
+      b.classList.toggle('on',on);
+      b.setAttribute('aria-pressed',on?'true':'false');
+    });
+  }
   if(motionOff()){tg.x=0;tg.y=0;kick()}
   paint();
 }
 
 const SLIDERS=[['gl','glass','%'],['bl','blur',''],['dp','depth','%'],['tl','tilt','%'],
                ['pr','par','%'],['gv','glow','%'],['sd','shadow','%']];
-function syncSlider(id,key,suf){
-  const el=$(id);if(!el)return;
-  el.value=S[key];
-  el.style.setProperty('--p',((S[key]-el.min)/(el.max-el.min)*100)+'%');
-  $(id+'V').textContent=S[key]+suf;
-  setVT(el,vtOf(id,S[key]));
+/* Each slider's input and its numeric readout are fixed for the life of the page, but the readout
+   was looked up again on every `input` event - a drag fires those continuously - and syncSlider()
+   looked both of them up on every call. They are resolved once here instead, so a drag frame costs
+   no document lookup for the two nodes it writes. */
+const SL={};
+SLIDERS.forEach(([id,key,suf])=>{const el=$(id);if(el)SL[id]={el,out:$(id+'V'),key,suf}});
+function syncSlider(id){
+  const s=SL[id];if(!s)return;
+  const el=s.el;
+  el.value=S[s.key];
+  el.style.setProperty('--p',((S[s.key]-el.min)/(el.max-el.min)*100)+'%');
+  if(s.out)s.out.textContent=S[s.key]+s.suf;
+  setVT(el,vtOf(id,S[s.key]));
 }
-SLIDERS.forEach(([id,key,suf])=>{
-  const el=$(id);if(!el)return;
-  syncSlider(id,key,suf);
+Object.keys(SL).forEach(id=>{
+  const s=SL[id],el=s.el,key=s.key;
+  syncSlider(id);
   el.oninput=()=>{
     S[key]=+el.value;
     el.style.setProperty('--p',((el.value-el.min)/(el.max-el.min)*100)+'%');
-    $(id+'V').textContent=el.value+suf;
+    if(s.out)s.out.textContent=el.value+s.suf;
     setVT(el,vtOf(id,el.value));
     applyS();saveSSoon();
   };
@@ -804,14 +822,14 @@ if(huEl){
   };
 }
 
-if($('mot'))$('mot').onclick=e=>{
+if(segEl)segEl.onclick=e=>{
   const b=e.target.closest('[data-m]');if(!b)return;
   S.motion=b.dataset.m;applyS();saveS();
 };
 if(driftBtn)driftBtn.onclick=()=>{S.drift=S.drift?0:1;applyS();saveS()};
 if($('resetBtn'))$('resetBtn').onclick=()=>{
   S=Object.assign({},DEF);
-  SLIDERS.forEach(([id,key,suf])=>syncSlider(id,key,suf));
+  Object.keys(SL).forEach(syncSlider);
   applyS();saveS();
 };
 

@@ -597,3 +597,33 @@ snapshot of both builds, so nothing visible moved.
   did before, and the geometry and computed style of `#app`, `#art`, `#title`, `#artist`, `#seek`,
   `#pp`, `#next`, `#prev`, `#closeBtn`, `#optBtn`, `#list`, `.lh` and `.times` are byte-identical
   to the previous build.
+- [x] 51. A slider drag frame re-resolved the motion segment and rewrote all three of its buttons.
+  **Symptom.** `applyS()` is the settings applier and every slider's `input` handler calls it, so a
+  drag runs it once per frame (~60/s). Each of those runs did `getElementById('mot')`, queried its
+  three buttons and rewrote their `on` class and `aria-pressed` - six DOM writes for a mode a slider
+  cannot change - and each slider's numeric readout was re-resolved with `getElementById(id+'V')` on
+  every frame as well. Measured with `document.getElementById` wrapped in a counter on the shipped
+  6.3 page, 60 `input` events on the Blur slider cost 120 `getElementById` calls, 180
+  `classList.toggle` and 180 `setAttribute` calls on the three motion buttons.
+  **Fixed in 6.4.** The segment's buttons and the mode last painted are resolved once (`segBtns`,
+  `segMode`), so `applyS()` repaints them only when `S.motion` has actually moved; each slider's
+  input and readout now live in one startup map, `SL`, so `syncSlider()` and the `input` handler
+  write through references they already hold. Re-measured the same 60 events on the shipped page:
+  `getElementById` 120 -> 0, `classList.toggle` 180 -> 0, `setAttribute` 180 -> 0. Picking a mode
+  and `Reset defaults` still repaint the segment (Auto / Touch / Off report the same `on` class and
+  `aria-pressed` as before, in the same order). Picking and dedupe, the title swap, row reuse (node
+  identity), `aria-current`, the back chain, debounced settings persistence, the slider readouts,
+  the `--blur` custom property and the flat and tilted `elementFromPoint` hit-tests (all six
+  controls resolving to themselves) report what they did before, and the geometry and computed
+  style of `#app`, `#art`, `#title`, `#artist`, `#seek`, `#pp`, `#next`, `#prev`, `#closeBtn`,
+  `#optBtn`, `#list`, `.lh` and `.times` are identical to the previous build at startup, with the
+  sheet open and after a drag.
+- [ ] 52. Opening and closing the settings sheet each cost a `getElementById('optBtn')`.
+  **Symptom.** `openSheet()` and `closeSheet()` both write `aria-expanded` on `#optBtn` through
+  `$('optBtn')`, although `sheetFocus` was initialised to that same node at startup. Measured with
+  `document.getElementById` wrapped in a counter on the shipped 6.4 page, one open plus one close -
+  whether it is closed with `Done` or with the scrim - costs 2 lookups, one per transition.
+- [ ] 53. A ten-entry note-frequency table is declared and never used.
+  **Symptom.** `const N={C4:261.6,D4:293.7,...,E5:659.3}` sits beside the other constants, and the
+  identifier `N` appears nowhere else in the page: it is dead weight in the file that ships inside
+  the APK, and it reads as if something plays a note.
