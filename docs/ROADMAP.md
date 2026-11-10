@@ -618,11 +618,24 @@ snapshot of both builds, so nothing visible moved.
   style of `#app`, `#art`, `#title`, `#artist`, `#seek`, `#pp`, `#next`, `#prev`, `#closeBtn`,
   `#optBtn`, `#list`, `.lh` and `.times` are identical to the previous build at startup, with the
   sheet open and after a drag.
-- [ ] 52. Opening and closing the settings sheet each cost a `getElementById('optBtn')`.
+- [x] 52. Opening and closing the settings sheet each cost a `getElementById('optBtn')`.
   **Symptom.** `openSheet()` and `closeSheet()` both write `aria-expanded` on `#optBtn` through
   `$('optBtn')`, although `sheetFocus` was initialised to that same node at startup. Measured with
   `document.getElementById` wrapped in a counter on the shipped 6.4 page, one open plus one close -
   whether it is closed with `Done` or with the scrim - costs 2 lookups, one per transition.
+  **Fixed in 6.5.** The opener is resolved once at startup into `optBtn`, beside `fileInput`,
+  `nextBtn` and `prevBtn`, and `openSheet()`, `closeSheet()`, `sheetFocus` and the click binding all
+  read that one reference, so a transition no longer touches the document at all. Re-measured with
+  `document.getElementById` wrapped in a counter on the shipped page, one press at a time: opening
+  went from `{optBtn:1}` to `{}` and closing with `Done` from `{optBtn:1}` to `{}`, and closing with
+  the scrim is `{}` too - `aria-expanded` still reads `true` while the sheet is open and `false`
+  after either close, and focus still returns to the opener. Picking and dedupe, the title swap, row
+  reuse (node identity), `aria-current`, the debounced settings write, the back chain (`true`,
+  `true`, `false`) and the flat and tilted `elementFromPoint` hit-tests (all six controls resolving
+  to themselves) report what they did before, and the geometry and computed style of `#app`,
+  `#art`, `#title`, `#artist`, `#seek`, `#pp`, `#next`, `#prev`, `#closeBtn`, `#optBtn`, `#list`,
+  `.lh` and `.times` are identical to the previous build at startup, with the sheet open and after
+  two open/close cycles.
 - [ ] 53. A ten-entry note-frequency table is declared and never used.
   **Symptom.** `const N={C4:261.6,D4:293.7,...,E5:659.3}` sits beside the other constants, and the
   identifier `N` appears nowhere else in the page: it is dead weight in the file that ships inside

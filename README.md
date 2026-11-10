@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 6.5 — the settings sheet stops looking up its own opener
+
+- `openSheet()` and `closeSheet()` each re-resolved `#optBtn` with `getElementById` to write `aria-expanded` on it, although the node has not moved since the page loaded; it is now one startup reference, taking one open plus one close from 2 lookups to 0, and nothing visible changed.
+
 ### 6.4 — a slider drag stops repainting the motion segment
 
 - `applyS()` runs on every `input` of a slider drag and each run re-resolved `#mot` and rewrote all three motion buttons, so 60 events on the Blur slider cost 120 `getElementById` calls and 360 class/attribute writes on buttons a slider cannot change; the segment is now resolved once and repainted only when the mode actually moves, and each slider's readout is held rather than looked up, taking the same drag to 0 and 0, and nothing visible changed.
