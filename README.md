@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 6.8 — the idle sway freezes with the player, not just the blobs behind it
+
+- `syncBlobs()` froze the three backdrop blobs while the player was collapsed to the bubble and while the page was hidden but never froze `.drift`, the wrapper carrying the 17s `sway` loop around the whole card, so an animation stayed live over a subtree whose only child is `display:none`; it now pauses with the blobs through `animation-play-state` and resumes from the same frame, and nothing visible changed.
+
 ### 6.7 — a settings drag stops rewriting the depth properties it does not touch
 
 - `applyS()` wrote `--glass`, `--blur`, `--tiltk` and `--park` on `:root` on every frame of every slider drag without checking whether the value had changed, so dragging Shadow re-blurred the card 20 times for nothing; each value last written is now remembered and a write is skipped when it would repeat, taking 20 Shadow-slider events from 80 root `setProperty` calls to 0 and 10 Blur-slider events from 40 to 10, and nothing visible changed.

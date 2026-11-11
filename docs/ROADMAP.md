@@ -679,13 +679,32 @@ snapshot of both builds, so nothing visible moved.
   `#closeBtn`, `#optBtn`, `#list`, `.lh` and `.times` - 13 elements x 17 properties, at startup,
   with the sheet open and after a drag, sampled with the decorative animations frozen and the depth
   spring parked at rest - are byte-identical to the 6.6 page.
-- [ ] 55. The idle-sway animation on `.drift` kept running while the player was collapsed to the
+- [x] 55. The idle-sway animation on `.drift` kept running while the player was collapsed to the
   bubble and while the page was hidden.
   **Symptom.** `syncBlobs()` freezes the three backdrop blobs in both states, but `.drift` - the
   wrapper that carries the 17s `sway` loop around the whole card - was never included, so it kept an
   animation live over a subtree whose only child is `display:none` once the player is collapsed.
   Measured on the shipped 6.6 page with `getAnimations()` on `.drift`: `running` after `#closeBtn`
   collapses the player, while the three `.blobs i` children correctly report `paused`.
+  **Fixed in 6.8.** `syncBlobs()` now resolves `.drift` once, lazily, and toggles the same `paused`
+  class on it that it has always toggled on `.blobs`, with `.drift.paused{animation-play-state:paused}`
+  beside the existing `.drift.off` rule. The freeze goes through `animation-play-state`, so the
+  frame on screen is the frame it stopped on and the sway resumes from that point rather than
+  restarting - the same way the blobs are already handled - and the class is dropped again the
+  moment the player reopens or the page becomes visible. Measured with `getAnimations()` on
+  `.drift` in headless Chromium, on the 6.7 page and the 6.8 page side by side: after `#closeBtn`
+  collapses the player the sway goes from `running` to `paused`, and with `document.hidden` stubbed
+  true and a `visibilitychange` dispatched it goes from `running` to `paused`; on reopening the
+  bubble and on becoming visible again it returns to `running` in both cases, and the three
+  `.blobs i` children report exactly what they did before (`paused` collapsed and hidden, `running`
+  otherwise). The user's own Idle-drift switch still wins: with it off the sway reports `none`
+  rather than `paused`, and switching it back on reports `running`. Picking and dedupe (3 rows, a
+  repeat pick leaves 3), the title swap (`a` -> `b`), row reuse (node identity across a skip),
+  `aria-current`, the debounced settings write, the back chain (`true`, `true`, `false`) and the
+  flat and tilted `elementFromPoint` hit-tests (all six controls resolving to themselves) report
+  what they did before, and the geometry and computed style of `#app`, `#art`, `#title`, `#artist`,
+  `#seek`, `#pp`, `#next`, `#prev`, `#closeBtn` and `#optBtn` - 10 elements x 14 properties - hash
+  identically to the 6.7 page. The page goes from 66,970 to 67,404 bytes.
 - [ ] 56. `load()` started a fresh 700 ms `switching` timer on every call and never cleared the
   previous one.
   **Symptom.** The timer exists to clear `switching` once a source swap's queued pause event has

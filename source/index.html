@@ -112,6 +112,7 @@ input[type=range]:focus-visible{outline:2px solid var(--tx);outline-offset:6px;b
     rotateY(calc(var(--mx,0) * 11deg * var(--tiltk,1)))}
 .drift{animation:sway 17s ease-in-out infinite alternate}
 .drift.off{animation:none}
+.drift.paused{animation-play-state:paused}
 @keyframes sway{0%{transform:rotateX(0.9deg) rotateY(-1.4deg)}100%{transform:rotateX(-1deg) rotateY(1.5deg)}}
 button,.it,.chip,.pill,.seg button,.sw,.opt{touch-action:manipulation}
 input[type=range]{touch-action:pan-y}
@@ -561,12 +562,16 @@ document.addEventListener('visibilitychange',()=>{dragging=false;if(document.hid
 /* The three blurred blobs behind the glass are the page backdrop. Their 14s float loop kept
    compositing while the player was collapsed to the bubble and while the page was hidden, where
    nothing of it is visible. Freeze it in both states; `animation-play-state` stops the loop in
-   place, so the frame on screen is unchanged. */
+   place, so the frame on screen is unchanged. `.drift`, the wrapper carrying the 17s sway around
+   the whole card, is part of the same subtree and is frozen the same way - it was missed before,
+   so the sway stayed live over a subtree whose only child is `display:none` once collapsed. */
 const blobField=document.querySelector('.blobs');
-let collapsed=false;
+let driftField=null,collapsed=false;
 function syncBlobs(){
-  if(!blobField)return;
-  blobField.classList.toggle('paused',collapsed||document.hidden);
+  const frozen=collapsed||document.hidden;
+  if(blobField)blobField.classList.toggle('paused',frozen);
+  driftField=driftField||document.querySelector('.drift');
+  if(driftField)driftField.classList.toggle('paused',frozen);
 }
 function setCollapsed(v){collapsed=v;syncBlobs()}
 document.addEventListener('visibilitychange',syncBlobs);
