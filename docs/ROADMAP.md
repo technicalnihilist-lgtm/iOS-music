@@ -736,3 +736,44 @@ snapshot of both builds, so nothing visible moved.
   `#optBtn`, `#list`, `.lh` and `.times` - 13 elements x 17 properties, at startup, with the sheet
   open and after two open/close cycles - hash identically on the two pages (6670-byte snapshot).
   The page goes from 67,404 to 68,359 bytes.
+
+- [x] 57. The duplicate check keyed on the display name alone, so a second song with the same file
+  name was silently dropped.
+  **Symptom.** `#file`'s dedupe key was `t.t+'|'+t.a` - the display name plus the artist line, and
+  the artist line is the constant `My library` - so the key was the bare name. Two different songs
+  that share a file name, the common case for `01 Intro.mp3` across two albums or the same title in
+  two folders, collapsed into a single entry: the second was dropped without a word and could never
+  be played. Measured in headless Chromium on the shipped 6.9 page by picking `Alpha.mp3` (1000
+  bytes, mtime 111), `Beta.mp3` and `Gamma.mp3` and then a genuinely different `Alpha.mp3` (9999
+  bytes, mtime 444): the playlist stayed at 3 rows and the new file's blob URL was never created,
+  while re-picking the first `Alpha.mp3` correctly stayed at 3.
+  **Fixed in 7.0.** Each entry now carries `k`, the display name together with the file's own
+  `size` and `lastModified`, and the seen-set is built from that. A repeat pick of the same file
+  reproduces the key exactly and is still rejected; a different file with the same name is kept.
+  The same sequence on the 7.0 page ends at 4 rows, with `Alpha` listed twice, the title reading
+  `Alpha` and the highlight on the copy that was just added. Picking and dedupe (3 rows, a repeat
+  pick leaves 3), the title swap on a row jump (`Alpha` -> `Beta`), row reuse (node identity across
+  a skip), `aria-current`, the debounced settings write, the back chain (`true`, `true`, `false`)
+  and the flat and tilted `elementFromPoint` hit-tests (all six controls resolving to themselves)
+  report what the 6.9 page reports, and the geometry and computed style of `#app`, `#art`,
+  `#title`, `#artist`, `#seek`, `#cur`, `#dur`, `#pp`, `#next`, `#prev`, `#closeBtn`, `#optBtn`,
+  `#list`, `#sheet`, `#bubble`, `#scrim`, `#live`, `.lh`, `.times`, `.meta`, `.artwrap`, `.top`,
+  `.row`, `.drift`, `.tilt`, `.blobs`, `.blobs i:nth-child(1)`, `.grab`, `.sec`, `.seg`,
+  `.seg button`, `.sw`, `.pill` and `.row2` - 34 elements x 22 properties, at startup and with the
+  sheet open - hash identically on the two pages (18566-byte snapshot). The page goes from 68,359
+  to 69,048 bytes.
+- [ ] 58. Collapsing the player to the bubble, and reopening it, both leave keyboard focus on a node
+  that is no longer rendered.
+  **Symptom.** `closeApp()` hides the card 520 ms later and shows the bubble, and `openApp()` does
+  the reverse, but neither of them moves focus. Measured in headless Chromium on the 7.0 page: with
+  focus on `#closeBtn` and a press on it, `document.activeElement` is still `#closeBtn`, inside the
+  card `closeApp()` has just set to `display:none`, 700 ms later; with focus on the bubble and a
+  press on it, `document.activeElement` is the bubble, which `openApp()` has just hidden. Either
+  way a keyboard or switch-access user is dropped to the document with no control under focus and
+  has to tab in from the top to get back to the player.
+- [ ] 59. The settings sheet is declared `aria-modal` but the player behind the scrim stays in the
+  accessibility tree.
+  **Symptom.** The sheet carries `aria-modal="true"` and contains Tab, so it behaves as a modal for
+  a keyboard, but nothing takes the card behind it out of the accessibility tree: a screen reader
+  in browse mode can still read and activate `#pp`, `#next`, `#prev` and the playlist rows under the
+  scrim, operating a player the sheet is supposed to be covering.

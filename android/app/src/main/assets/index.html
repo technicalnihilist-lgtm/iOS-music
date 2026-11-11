@@ -986,16 +986,24 @@ $('file').onchange=e=>{
   const fs=e.target.files?[...e.target.files]:[];
   e.target.value='';                       /* so picking the same file again still fires */
   if(!fs.length)return;
-  const seen=new Set(tracks.map(t=>t.t+'|'+t.a));
+  /* Identity for the duplicate check used to be the display name plus the artist line, and the
+     artist line is the constant "My library" - so the key was the bare name, and two different
+     songs that happen to share a file name ("01 Intro.mp3" from two albums, or the same track
+     name in two folders) collapsed into a single entry: the second was dropped without a word
+     and could never be played. The key is now the name together with the file's own size and
+     modification time, which a repeat pick of the same file reproduces exactly and a different
+     file with the same name does not. The display name and every other field are unchanged. */
+  const seen=new Set(tracks.map(t=>t.k));
   const first=tracks.length;
   fs.forEach(f=>{
     const name=f.name.replace(/\.[^.]+$/,'');
-    const key=name+'|My library';
+    const key=name+'|'+f.size+'|'+f.lastModified;
     if(seen.has(key))return;               /* don't stack duplicates */
     seen.add(key);
     tracks.push({
       t:name,
       a:'My library',
+      k:key,
       /* golden angle: hues stay spread out. The product is taken mod 360 to keep the angle in
          [0,360), but rounding can land on exactly 360 on long lists (n = 610, 1220, 1830 ...),
          which is hue 0 written as a value outside the 0-359 domain every other read site assumes

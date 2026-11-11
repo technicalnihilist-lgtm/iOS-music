@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 7.0 — a second song with the same file name is no longer dropped
+
+- `#file`'s duplicate check keyed on the display name plus the artist line, and the artist line is the constant "My library", so the key was the bare name and two different songs that share a file name — `01 Intro.mp3` from two albums is the common case — collapsed into one entry, with the second dropped without a word and impossible to play; each entry now carries a key of the name plus the file's own size and modification time, so a repeat pick of the same file is still rejected while a different file with the same name is kept, and nothing visible changed.
+
 ### 6.9 — an earlier load cannot close the settling window under a later one
 
 - every `load()` started its own 700 ms `switching` timer and never cancelled the previous one, so a skip or a rapid Next left timers stacked and an earlier one cleared the guard while a newer source was still settling, painting the card paused over a track that was starting; one handle is now cancelled and re-armed by each load, leaving a single live timer that belongs to the most recent load, and nothing visible changed.
