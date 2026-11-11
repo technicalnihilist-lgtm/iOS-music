@@ -258,6 +258,15 @@ let dragging=false;    // the user is scrubbing the seek bar
 let fails=0;           // consecutive tracks that refused to play
 const MAX_SKIP=3;      // how many consecutive unplayable tracks the skip chain may walk
 let stopped=false;     // the skip chain gave up and reported; a trailing play() rejection must not talk over it
+/* One pending clear of `switching`, owned by whichever load armed it last. Every load used to
+   start its own 700 ms timer and never cancel the previous one, so an earlier load's timer fired
+   while a later source was still settling and dropped the guard under it - the queued pause of
+   the newer swap then landed as if it were the user's, painting the card paused over a track
+   that was starting. The handle lives here, and every path that clears the flag cancels the timer
+   with it, so exactly one timer can be live and it always belongs to the most recent load. */
+let switchTimer=0;
+function clearSwitching(){clearTimeout(switchTimer);switchTimer=0;switching=false}
+function armSwitching(){clearTimeout(switchTimer);switchTimer=setTimeout(clearSwitching,700)}
 let swapToken=0;       // guards the delayed title swap against fast track skipping
 let loadSrc=null;      // the source assigned for the track on deck, so a repeat load is a no-op
 let loadAt=0;          // when that source was assigned (monotonic), for the rapid-repeat window
@@ -318,7 +327,7 @@ function playError(n){
 }
 function playRefused(err){
   const denied=!!err&&(err.name==='NotAllowedError'||err.name==='SecurityError');
-  switching=false;
+  clearSwitching();
   if(au.paused){
     setPlaying(false);
     setShellPlaying(false);
@@ -428,17 +437,19 @@ function load(i,autoplay,dir){
     au.src=t.src;
     loadSrc=t.src;loadAt=performance.now();
   }catch(e){
-    switching=false;
+    clearSwitching();
     playError(0);
     return;
   }
   if(autoplay){
     attemptPlay(()=>{fails=0});
+    /* the pause event from swapping the source is queued, not immediate. One handle, re-armed by
+       each load, so an earlier load's window cannot close over a later one; a load that does not
+       autoplay has nothing to guard against and leaves no timer behind. */
+    armSwitching();
   }else{
-    switching=false;
+    clearSwitching();
   }
-  /* the pause event from swapping the source is queued, not immediate */
-  setTimeout(()=>{switching=false},700);
 }
 
 /* transport */
@@ -477,7 +488,7 @@ au.onpause=()=>{
 au.onended=()=>load(idx+1,true,1);
 
 au.onerror=()=>{
-  switching=false;
+  clearSwitching();
   fails++;
   /* Bounded skip. This used to advance through the whole playlist on a run of unplayable
      files - one source swap per entry - so a long list of bad files meant dozens of loads
@@ -557,7 +568,7 @@ sk.oninput=e=>{
 ['pointerdown','touchstart'].forEach(ev=>sk.addEventListener(ev,()=>{dragging=true},{passive:true}));
 ['pointerup','pointercancel','touchend','touchcancel','blur'].forEach(ev=>sk.addEventListener(ev,()=>{dragging=false},{passive:true}));
 ['pointerup','pointercancel','touchend','touchcancel'].forEach(ev=>window.addEventListener(ev,()=>{dragging=false},{passive:true}));
-document.addEventListener('visibilitychange',()=>{dragging=false;if(document.hidden)switching=false;});
+document.addEventListener('visibilitychange',()=>{dragging=false;if(document.hidden)clearSwitching();});
 
 /* The three blurred blobs behind the glass are the page backdrop. Their 14s float loop kept
    compositing while the player was collapsed to the bubble and while the page was hidden, where

@@ -705,7 +705,7 @@ snapshot of both builds, so nothing visible moved.
   what they did before, and the geometry and computed style of `#app`, `#art`, `#title`, `#artist`,
   `#seek`, `#pp`, `#next`, `#prev`, `#closeBtn` and `#optBtn` - 10 elements x 14 properties - hash
   identically to the 6.7 page. The page goes from 66,970 to 67,404 bytes.
-- [ ] 56. `load()` started a fresh 700 ms `switching` timer on every call and never cleared the
+- [x] 56. `load()` started a fresh 700 ms `switching` timer on every call and never cleared the
   previous one.
   **Symptom.** The timer exists to clear `switching` once a source swap's queued pause event has
   landed, but overlapping loads - the bounded skip chain walks up to three tracks, and rapid Next
@@ -713,3 +713,26 @@ snapshot of both builds, so nothing visible moved.
   is still settling and clears `switching` under it. Measured with `window.setTimeout` wrapped in a
   counter on the shipped 6.6 page: one pick leaves 2 live 700 ms timers, one skip takes it to 4, two
   more to 5.
+  **Fixed in 6.9.** The pending clear is now a single handle, `switchTimer`, owned by the most recent
+  load: `armSwitching()` cancels the previous timer before arming its own, and every path that used
+  to write `switching=false` outright - a refused play, a source that would not load, a load that
+  does not autoplay, the `error` skip chain and a page becoming hidden - now goes through
+  `clearSwitching()`, which cancels the timer with the flag, so no timer can outlive the state it
+  clears. A load that does not autoplay arms nothing at all, since it clears the flag in the same
+  breath. Measured in headless Chromium with `setTimeout` wrapped in a counter and the count read
+  synchronously after each call: back-to-back skips leave 2 live 700 ms timers on the 6.8 page and 1
+  on the 6.9 page, and the count no longer grows with the length of the skip chain. The symptom the
+  item names reproduces on the 6.8 page and is gone on the 6.9 page: with a pick, a skip 500 ms
+  later and the swap's own unsolicited `pause` dispatched at 760 ms, 6.8 has already been cleared by
+  the first load's timer and paints the transport paused (`aria-pressed="false"`) over a track that
+  is starting, while 6.9 still holds the guard and ignores it (`aria-pressed="true"`); a pause the
+  page itself asked for is honoured in both, at the same moment. Picking and dedupe (3 rows, a
+  repeat pick leaves 3), the title swap (`a` -> `b`, then back to `a` after three skips), row reuse
+  (node identity across a skip), `aria-current`, the debounced settings write (`glass: 31` stored,
+  label `31%`), the back chain (`true`, `true`, `false`) and the flat and tilted
+  `elementFromPoint` hit-tests (all six controls resolving to themselves) report what the 6.8 page
+  reports, with no console or unhandled-rejection noise on either, and the geometry and computed
+  style of `#app`, `#art`, `#title`, `#artist`, `#seek`, `#pp`, `#next`, `#prev`, `#closeBtn`,
+  `#optBtn`, `#list`, `.lh` and `.times` - 13 elements x 17 properties, at startup, with the sheet
+  open and after two open/close cycles - hash identically on the two pages (6670-byte snapshot).
+  The page goes from 67,404 to 68,359 bytes.

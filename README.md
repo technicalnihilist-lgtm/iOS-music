@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 6.9 — an earlier load cannot close the settling window under a later one
+
+- every `load()` started its own 700 ms `switching` timer and never cancelled the previous one, so a skip or a rapid Next left timers stacked and an earlier one cleared the guard while a newer source was still settling, painting the card paused over a track that was starting; one handle is now cancelled and re-armed by each load, leaving a single live timer that belongs to the most recent load, and nothing visible changed.
+
 ### 6.8 — the idle sway freezes with the player, not just the blobs behind it
 
 - `syncBlobs()` froze the three backdrop blobs while the player was collapsed to the bubble and while the page was hidden but never froze `.drift`, the wrapper carrying the 17s `sway` loop around the whole card, so an animation stayed live over a subtree whose only child is `display:none`; it now pauses with the blobs through `animation-play-state` and resumes from the same frame, and nothing visible changed.
