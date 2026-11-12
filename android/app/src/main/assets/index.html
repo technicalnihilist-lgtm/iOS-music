@@ -588,7 +588,22 @@ function setCollapsed(v){collapsed=v;syncBlobs()}
 document.addEventListener('visibilitychange',syncBlobs);
 
 /* app open / close with bounce */
-let closeTimer=null,closing=false;
+/* Collapsing the player used to leave focus on a node that was about to be hidden: press `#closeBtn`
+   and 520ms later `document.activeElement` was still `#closeBtn`, inside the card `closeApp()` had
+   just set to `display:none`; reopen with the bubble and focus was on the bubble, which `openApp()`
+   had just hidden. Either way a keyboard or switch-access user was dropped to the document with no
+   control under focus and had to tab in from the top to reach the player again.
+   Now the node the close took focus from is remembered, the bubble takes focus at the moment the
+   card is actually hidden (and only if the collapse left focus in the hidden card or nowhere, so a
+   close never pulls focus off something the user has since moved to), and reopening hands focus
+   back to that remembered node - or to `#closeBtn`, the bubble's counterpart, when there was none.
+   `preventScroll` keeps either move from scrolling. Both moves are also gated on the last input
+   being the keyboard (`kbInput`, tracked below): a script focus after a touch or mouse gesture is
+   left to the browser's `:focus-visible` heuristic, and moving it there could paint the 2px focus
+   ring on a control the user only tapped, which is a visible change. A pointer user therefore keeps
+   exactly the pixels and the (harmless, ring-free) behaviour it had; a keyboard or switch user, the
+   one who was actually stranded, gets a rendered control under focus at all times. */
+let closeTimer=null,closing=false,cardFocus=null;
 function openApp(){
   if(closeTimer){clearTimeout(closeTimer);closeTimer=null}   /* reopen mid-collapse: cancel the hide */
   closing=false;
@@ -596,20 +611,39 @@ function openApp(){
   bubble.classList.remove('show');
   app.style.display='';
   app.classList.remove('out');restart(app,'in');
+  /* the card is rendered again: put focus back where the collapse took it from */
+  const a=document.activeElement;
+  if(kbInput&&(a===null||a===document.body||a===bubble)){
+    let t=cardFocus;
+    if(!t||t===app||!document.contains(t)||t.closest('.sheet'))t=$('closeBtn');
+    try{t.focus({preventScroll:true})}catch(e){t.focus()}
+  }
 }
 function closeApp(){
   if(closing)return;
   closing=true;
-  /* the player is collapsing under this: focusing its options button would only be dropped again
-     when the app is hidden 520ms later, so leave focus where the close leaves it */
+  /* remember where focus was, before the sheet close and the hide start moving it around; a node
+     inside the sheet is no use on reopen (the sheet stays shut), so it falls back to `#closeBtn` */
+  const a=document.activeElement;
+  if(a&&a!==document.body&&a!==app&&app.contains(a))cardFocus=a.closest('.sheet')?null:a;
   closeSheet(false);
   app.classList.remove('in');app.classList.add('out');
   closeTimer=setTimeout(()=>{
     closeTimer=null;closing=false;
     app.style.display='none';bubble.classList.add('show');
     setCollapsed(true);                        /* nothing of the player is on screen now */
+    const b=document.activeElement;            /* the only rendered control left is the bubble */
+    if(kbInput&&(b===null||b===document.body||(b!==bubble&&app.contains(b)))){
+      try{bubble.focus({preventScroll:true})}catch(e){bubble.focus()}
+    }
   },520);
 }
+/* Which modality the last interaction used. `true` only after a keypress, cleared by any pointer or
+   touch, so the two focus moves above happen for a keyboard or switch user and never for a tap.
+   Capture phase, so the flag is already set when the handlers below run. */
+let kbInput=false;
+addEventListener('keydown',()=>{kbInput=true},true);
+['pointerdown','touchstart','mousedown'].forEach(ev=>addEventListener(ev,()=>{kbInput=false},true));
 $('closeBtn').onclick=closeApp;
 bubble.onclick=openApp;
 /* The bubble is the only way back into a collapsed player, so it must answer the keyboard the

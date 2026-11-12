@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 7.1 — collapsing the player no longer strands keyboard focus
+
+- `closeApp()` hid the card and showed the bubble, and `openApp()` did the reverse, without moving focus, so a press on `#closeBtn` left `document.activeElement` inside the card that had just been set to `display:none` and a press on the bubble left it on the bubble `openApp()` had just hidden — a keyboard or switch-access user was dropped to the document with no control under focus; the close now remembers the node focus was on and hands it to the bubble when the card is actually hidden, reopening focuses that node again (or `#closeBtn`), and both moves are gated on the last input being the keyboard so a tap never paints a focus ring, leaving nothing visible changed.
+
 ### 7.0 — a second song with the same file name is no longer dropped
 
 - `#file`'s duplicate check keyed on the display name plus the artist line, and the artist line is the constant "My library", so the key was the bare name and two different songs that share a file name — `01 Intro.mp3` from two albums is the common case — collapsed into one entry, with the second dropped without a word and impossible to play; each entry now carries a key of the name plus the file's own size and modification time, so a repeat pick of the same file is still rejected while a different file with the same name is kept, and nothing visible changed.

@@ -762,7 +762,7 @@ snapshot of both builds, so nothing visible moved.
   `.seg button`, `.sw`, `.pill` and `.row2` - 34 elements x 22 properties, at startup and with the
   sheet open - hash identically on the two pages (18566-byte snapshot). The page goes from 68,359
   to 69,048 bytes.
-- [ ] 58. Collapsing the player to the bubble, and reopening it, both leave keyboard focus on a node
+- [x] 58. Collapsing the player to the bubble, and reopening it, both leave keyboard focus on a node
   that is no longer rendered.
   **Symptom.** `closeApp()` hides the card 520 ms later and shows the bubble, and `openApp()` does
   the reverse, but neither of them moves focus. Measured in headless Chromium on the 7.0 page: with
@@ -777,3 +777,26 @@ snapshot of both builds, so nothing visible moved.
   a keyboard, but nothing takes the card behind it out of the accessibility tree: a screen reader
   in browse mode can still read and activate `#pp`, `#next`, `#prev` and the playlist rows under the
   scrim, operating a player the sheet is supposed to be covering.
+  **Fixed in 7.1.** `closeApp()` now remembers the node focus was on (skipping anything inside the
+  sheet, which stays shut, so it falls back to `#closeBtn`), and the bubble takes focus at the moment
+  the card is actually hidden - inside the existing 520 ms timer, when it is the only rendered
+  control left - but only if the collapse left focus inside the hidden card or nowhere, so a close
+  never pulls focus off something the user has since moved to. `openApp()` hands focus back to that
+  remembered node, or to `#closeBtn` when there was none, as soon as the card is rendered again.
+  Both moves use `preventScroll`, and both are gated on `kbInput`, a flag set by a `keydown` and
+  cleared by any `pointerdown`/`touchstart`/`mousedown` in the capture phase: a script focus after a
+  tap can paint the 2px `:focus-visible` ring, which would be a visible change, so a pointer user
+  keeps exactly the behaviour and pixels it had while a keyboard or switch user gets a rendered
+  control under focus. Measured in headless Chromium with the same harness run against the 7.0 and
+  7.1 pages: focus on `#closeBtn`, press, 850 ms later, 7.0 leaves `document.activeElement` on
+  `#closeBtn` with `getClientRects().length === 0` (a node inside a `display:none` card) and 7.1
+  leaves it on `#bubble`, rendered; reopening with Enter on the bubble lands on `#closeBtn` in both,
+  rendered in both; the pointer path reports the same `activeElement` and the same ring state on the
+  two pages. Picking (3 rows, a repeat pick leaves 3), the title swap on a row jump (`Beta`), row
+  reuse (node identity across a skip), `aria-current`, the debounced settings write (a `#gl` drag to
+  30 lands `glass:30` in `glass.settings.v1`), the back chain (`true`, `true`, `false`) and the flat
+  and tilted `elementFromPoint` hit-tests (all six controls resolving to themselves) report what the
+  7.0 page reports. The two pages were loaded side by side in one browser and snapshotted together
+  at startup, 600 ms in, with the sheet open and after a pick plus a row jump - 34 elements x 22
+  properties - and every stage hashes identically (0 differing elements). The page goes from 69,048
+  to 71,698 bytes.
