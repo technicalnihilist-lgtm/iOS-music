@@ -867,3 +867,52 @@ snapshot of both builds, so nothing visible moved.
   (`#gl` at 30 lands `glass:30` in `glass.settings.v1` and nothing is written synchronously), the
   back chain (`true`, `true`, `false`), and the flat and tilted `elementFromPoint` hit-tests (all
   six controls resolving to themselves). The page goes from 75,167 to 75,270 bytes.
+
+## Backlog added after the 62 items above were cleared (found 2026-11-12)
+
+- [x] 63. The skip chain's give-up branch leaves the media session reporting "playing" after it has
+  stopped.
+  **Symptom.** A stop has to be reported in three places - the card's paint, the shell's audio focus
+  and the media session - and the third was typed out by hand at each call site that had one
+  (`au.onplay`, `au.onpause`, `playRefused`). The give-up branch of `au.onerror` is the one stop
+  that fires no pause event of its own, and it never got the line: measured in headless Chromium on
+  the 7.5 page, pick a single track, let it play (`navigator.mediaSession.playbackState` is
+  "playing", the notification says so), then let the source fail - `#pp` flips to "play",
+  `aria-pressed` goes "false", the artist line reads "Can't play this file", the status region
+  announces it and `window.GP.setPlaying(false)` drops the shell's audio focus, while
+  `navigator.mediaSession.playbackState` is still "playing". The lock screen and the media
+  notification therefore keep a play/pause control and a "playing" state over a player that has
+  given up, until the next track or a teardown replaces them.
+  **Fixed in 7.6.** One helper, `setSessionPlaying(v)`, sits beside `setShellPlaying()` and is now
+  the only place the page writes `mediaSession.playbackState`: `au.onplay`, `au.onpause`,
+  `playRefused` and the give-up branch all call it (the three hand-written `try/catch` copies are
+  gone), so a path that paints a stop cannot report it to the card and the shell while leaving the
+  session behind. Measured against the 7.5 page in headless Chromium: after the give-up the state
+  is "paused" on 7.6 where 7.5 reported "playing", with `aria-pressed` "false", the `playing` class
+  off, the artist line and the "Can't play this file." status identical on both pages; an ordinary
+  transport is untouched - pick three tracks (state "playing", `aria-pressed` "true"), press pause
+  ("paused", "false"), press play ("playing", "true") - and a refused play still reports "paused".
+  Nothing on screen moves: 128 elements x 30 computed properties plus their bounding rects hash
+  identically against 7.5 in the player state (0 differing) and with the sheet open (0 differing,
+  against a 7.5-vs-7.5 control run that also reports 0), and the rendered 412x892 frame at
+  deviceScaleFactor 2 is the same hash on both pages in both states (`e57fd2390a24`), stable across
+  two captures of each. The behaviour harness reports what the 7.5 page reports: picking (3 rows, an
+  exact repeat leaves 3), the title after a row jump (`two`), row reuse (node identity across a
+  jump), the debounced settings write (`#gl` at 30 lands `glass:30` in `glass.settings.v1` and
+  survives a reload), the back chain (`true`, `true`, `false`) and the flat and tilted
+  `elementFromPoint` hit-tests (all six controls resolving to themselves). The page goes from
+  75,270 to 75,898 bytes.
+- [ ] 64. Five more places hold a second handle to a node the page already caches, and `openApp()`
+  re-resolves `#closeBtn` on every reopen.
+  **Symptom.** Items 45 and 50 swept the per-press document lookups but missed these:
+  `const huEl=$('hu')` at the colour-shift slider duplicates `EL.hu`, which `paintTrack()` already
+  writes; `const artBox=$('art')` duplicates `EL.art`; `.drift` is held twice under two names -
+  `driftEl` for `applyS()` and `driftField` for `syncBlobs()` - so the same node has two handles
+  that can drift apart; `$('file').onchange` re-resolves the input that `fileInput` already holds;
+  and `openApp()` calls `$('closeBtn')` inside its focus fallback, a document lookup on every
+  reopen of the card from the bubble. None of them is hot enough to see, which is why they survived
+  the sweep, but each is a second source of truth for a node that never moves.
+  **Not done yet.** Behaviour-identical by construction: the fix is to point every site at the
+  existing handle, add `#addBtn`/`#resetBtn` to the startup cache the way `#file`, `#next`, `#prev`
+  and `#optBtn` already are, and keep one name for `.drift`. Verify with the behaviour harness, the
+  flat and tilted hit-tests and the computed-style/pixel comparison; nothing rendered can change.

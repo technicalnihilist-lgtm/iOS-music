@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 7.6 — a player that gives up on unplayable files tells the lock screen it stopped
+
+- the skip chain's give-up branch painted the stop and told the Android shell to drop audio focus, but it never wrote `navigator.mediaSession.playbackState` — the one stop in the page that fires no pause event of its own — so the lock screen and the media notification kept showing "playing" over a player that had already stopped; that write now goes through a single `setSessionPlaying()` helper beside `setShellPlaying()`, used by `onplay`, `onpause`, the refused-play path and the give-up branch, so the state reads "paused" the moment the chain stops, an ordinary play/pause still reports playing and paused, and the rendered frame is identical pixel for pixel.
+
 ### 7.5 — the playlist and the card header are sections a screen reader can name and jump to
 
 - `#list` was an unnamed `role="list"` and the visible "Playlist" above it was a plain `div`, so the accessibility tree exposed a list with no name and no heading to jump to, and "Now Playing" was a plain `b`; the two labels now carry `role="heading" aria-level="2"` and the list is named by its own label, so the tree reads "Now Playing", the track title and "Playlist" as three level-2 headings with the list named "Playlist", while no attribute is rendered, no stylesheet selects on them, and the rendered frame is identical pixel for pixel in the player, playlist and sheet states.

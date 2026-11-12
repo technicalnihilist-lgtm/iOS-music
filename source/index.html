@@ -323,6 +323,17 @@ function setPlaying(v){
 function setShellPlaying(v){
   try{if(window.GP&&window.GP.setPlaying)window.GP.setPlaying(v)}catch(e){}
 }
+/* A stop has to be reported in three places - the card's paint, the shell's audio focus, and the
+   media session - and the third was written out by hand at each call site that had one: `onplay`,
+   `onpause` and the refused-play path. The give-up branch of the skip chain never got the line, so
+   the one stop that fires no pause event of its own left the lock screen and the media notification
+   saying "playing" over a player that had stopped. One helper, so every path that paints a stop can
+   report it, and a new one cannot be added without it. The state is not rendered, so nothing on
+   screen is involved. */
+function setSessionPlaying(v){
+  if(!('mediaSession' in navigator))return;
+  try{navigator.mediaSession.playbackState=v?'playing':'paused'}catch(e){}
+}
 /* One source for the "cannot play" copy. It used to be typed out at four call sites, so the
    artist line and the status message could drift apart, and a fix to the wording meant finding
    every copy. n>0 is the skip chain giving up after n failures: same visible line, a status
@@ -339,7 +350,7 @@ function playRefused(err){
   if(au.paused){
     setPlaying(false);
     setShellPlaying(false);
-    if('mediaSession' in navigator){try{navigator.mediaSession.playbackState='paused'}catch(e){}}
+    setSessionPlaying(false);
   }
   /* the skip chain already said why it stopped; the rejection that follows the same bad source
      would replace that message with the generic one, so leave it alone */
@@ -387,7 +398,7 @@ function setSession(t){
     if('MediaMetadata' in window){
       navigator.mediaSession.metadata=new MediaMetadata({title:t.t,artist:t.a,album:'Glass Player'});
     }
-    navigator.mediaSession.playbackState=au.paused?'paused':'playing';
+    setSessionPlaying(!au.paused);
   }catch(e){}
 }
 /* The media session outlives the document that created it. Android keeps the notification and the
@@ -481,7 +492,7 @@ prevBtn.onclick=()=>{
 au.onplay=()=>{
   setPlaying(true);
   restart(ppBtn,'bump');
-  if('mediaSession' in navigator){try{navigator.mediaSession.playbackState='playing'}catch(e){}}
+  setSessionPlaying(true);
   setShellPlaying(true);
 };
 au.onpause=()=>{
@@ -499,7 +510,7 @@ au.onpause=()=>{
   setShellPlaying(false);
   setPlaying(false);
   restart(ppBtn,'bump');
-  if('mediaSession' in navigator){try{navigator.mediaSession.playbackState='paused'}catch(e){}}
+  setSessionPlaying(false);
 };
 au.onended=()=>load(idx+1,true,1);
 
@@ -523,6 +534,7 @@ au.onerror=()=>{
     if(tracks[idx])paintTrack(tracks[idx]);   /* ...but paint the block now, so it names the track this gave up on */
     setPlaying(false);
     setShellPlaying(false);
+    setSessionPlaying(false);  /* this stop fires no pause event, so nothing else reports it */
     playError(n);
   }
 };
