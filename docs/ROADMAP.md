@@ -799,3 +799,35 @@ snapshot of both builds, so nothing visible moved.
   in `glass.settings.v1`), the back chain (`true`, `true`, `false`) and the flat and tilted
   `elementFromPoint` hit-tests (all six controls resolving to themselves) report what the 7.1 page
   reports. The page goes from 71,705 to 73,342 bytes.
+- [x] 60. An unplayable file starts playback the listener had paused.
+  **Symptom.** The skip chain in `au.onerror` passed a hard `true` for autoplay, so it resumed
+  playback whatever the transport had last been asked for. Measured in headless Chromium on the
+  7.2 page: pause during "One", press Next onto a file the platform will not decode, and the chain
+  walks past it and starts "Three" out loud - `playing` true and `currentTime` running from 0, with
+  no press from the listener and nothing on screen to say why. It is the opposite of what the same
+  press does on a playable file, where `nextBtn` passes `!au.paused` and the player stays quiet.
+  **Fixed in 7.3.** `load()` now records the intent it was asked for in `wantPlay`; `attemptPlay()`
+  sets it, `requestPause()`, an honoured `onpause` and the give-up branch clear it, and the chain
+  re-loads with that instead of a hard `true`. Measured against the 7.2 page: paused + Next onto an
+  undecodable file now lands on "Three" with `playing` false and `currentTime` at 0 and stays there
+  for the next 1.5 s, and a press on play then starts it (`currentTime` 1.1); playing + the same
+  press still skips to "Three" and keeps playing (3.9 -> 5.5); a row tap still asks for playback,
+  `ended` still advances and plays, and three unplayable tracks in a row still give up on the third
+  with the same visible line and the same "Stopped after 3 unplayable tracks." status. 64 elements
+  x 39 computed properties plus their bounding rects, and the rendered 420x900 frame (0 of 378,000
+  pixels differ), hash identically against 7.2. The page goes from 73,342 to 74,528 bytes.
+- [ ] 61. Every slider's accessible name changes with its value.
+  **Symptom.** Each slider sits inside a `<label>` whose text includes its own numeric readout, so
+  the computed name is "Transparency 18%" and becomes "Transparency 40%" in the middle of a drag:
+  measured in the accessibility tree of the 7.2 page, moving `#gl` from 18 to 40 changes the slider's
+  name from "Transparency 18%" to "Transparency 40%", while `aria-valuetext` already carries that
+  same reading. A screen reader re-announces a changed name on every step of the drag, which buries
+  the value it is meant to be reading, and the name no longer identifies the control once it has
+  moved. The same holds for `#bl`, `#hu`, `#dp`, `#tl`, `#pr`, `#gv` and `#sd`.
+- [ ] 62. The playlist has no accessible name, and "Playlist" is not a heading.
+  **Symptom.** `#list` is `role="list"` with no name of its own and the visible "Playlist" above it
+  is a plain `div`, so the accessibility tree of the 7.2 page exposes an unnamed list: a
+  screen-reader user hears "list" without learning what it holds, and cannot reach the playlist by
+  heading navigation, which is the only way to skip the transport controls. "Now Playing" at the top
+  of the card is a plain `b` for the same reason, while the track title under it is the page's only
+  heading, so the outline reads as a single heading with no sections around it.
