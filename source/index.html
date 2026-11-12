@@ -181,16 +181,16 @@ input[type=range]{touch-action:pan-y}
   <h3 id="sheetTitle">Settings</h3>
 
   <div class="sec">Glass</div>
-  <label class="opt"><span>Transparency <em id="glV">18%</em></span><input type="range" id="gl" min="2" max="50" value="18" aria-valuetext="18%"></label>
-  <label class="opt"><span>Blur <em id="blV">28</em></span><input type="range" id="bl" min="0" max="60" value="28" aria-valuetext="28 pixels"></label>
-  <label class="opt"><span>Colour shift <em id="huV">250°</em></span><input type="range" id="hu" min="0" max="360" value="250" aria-valuetext="250 degrees"></label>
+  <label class="opt"><span>Transparency <em id="glV">18%</em></span><input type="range" id="gl" min="2" max="50" value="18" aria-label="Transparency" aria-valuetext="18%"></label>
+  <label class="opt"><span>Blur <em id="blV">28</em></span><input type="range" id="bl" min="0" max="60" value="28" aria-label="Blur" aria-valuetext="28 pixels"></label>
+  <label class="opt"><span>Colour shift <em id="huV">250°</em></span><input type="range" id="hu" min="0" max="360" value="250" aria-label="Colour shift" aria-valuetext="250 degrees"></label>
 
   <div class="sec">4D depth</div>
-  <label class="opt"><span>Depth <em id="dpV">60%</em></span><input type="range" id="dp" min="0" max="100" value="60" aria-valuetext="60%"></label>
-  <label class="opt"><span>Tilt <em id="tlV">100%</em></span><input type="range" id="tl" min="0" max="150" value="100" aria-valuetext="100%"></label>
-  <label class="opt"><span>Parallax <em id="prV">100%</em></span><input type="range" id="pr" min="0" max="200" value="100" aria-valuetext="100%"></label>
-  <label class="opt"><span>Light <em id="gvV">100%</em></span><input type="range" id="gv" min="0" max="200" value="100" aria-valuetext="100%"></label>
-  <label class="opt"><span>Shadow <em id="sdV">100%</em></span><input type="range" id="sd" min="0" max="200" value="100" aria-valuetext="100%"></label>
+  <label class="opt"><span>Depth <em id="dpV">60%</em></span><input type="range" id="dp" min="0" max="100" value="60" aria-label="Depth" aria-valuetext="60%"></label>
+  <label class="opt"><span>Tilt <em id="tlV">100%</em></span><input type="range" id="tl" min="0" max="150" value="100" aria-label="Tilt" aria-valuetext="100%"></label>
+  <label class="opt"><span>Parallax <em id="prV">100%</em></span><input type="range" id="pr" min="0" max="200" value="100" aria-label="Parallax" aria-valuetext="100%"></label>
+  <label class="opt"><span>Light <em id="gvV">100%</em></span><input type="range" id="gv" min="0" max="200" value="100" aria-label="Light" aria-valuetext="100%"></label>
+  <label class="opt"><span>Shadow <em id="sdV">100%</em></span><input type="range" id="sd" min="0" max="200" value="100" aria-label="Shadow" aria-valuetext="100%"></label>
 
   <div class="sec">Motion</div>
   <div class="seg" id="mot">
@@ -364,7 +364,12 @@ const fmt=s=>{
 /* Each slider's numeric readout is a separate <em> node, so the range input itself announced a
    bare number ("250") with no unit. aria-valuetext carries the same reading, unit included, and is
    written from the same places the visible readout is written so the two cannot disagree. The
-   attribute is not rendered, so nothing on screen moves. */
+   attribute is not rendered, so nothing on screen moves.
+   The readout also sits inside the slider's <label>, which made the slider's *name* change with
+   its value ("Transparency 18%" -> "Transparency 40%"), so every step of a drag re-announced a
+   new name over the value being read. Each range input now carries a static aria-label holding
+   just the control's name, which takes precedence over the label content; the name is fixed and
+   the value stays on aria-valuetext. An attribute only, so nothing on screen moves. */
 const VT_UNIT={gl:'%',bl:' pixels',hu:' degrees',dp:'%',tl:'%',pr:'%',gv:'%',sd:'%'};
 const vtOf=(id,v)=>v+(VT_UNIT[id]||'');
 function setVT(el,txt){

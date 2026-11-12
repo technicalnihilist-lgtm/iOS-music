@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 7.4 — each settings slider keeps one accessible name while it moves
+
+- every slider sat inside a `<label>` whose text included its own numeric readout, so its computed name changed on every step of a drag ("Transparency 18%" became "Transparency 40%") and a screen reader re-announced a new name over the value it was reading; each of the eight range inputs now carries a static `aria-label` with just the control's name, the reading stays on `aria-valuetext`, and the rendered frame is identical pixel for pixel.
+
 ### 7.3 — a file that will not play no longer starts the next one behind a pause
 
 - `au.onerror`'s skip chain re-loaded the next track with a hard `true` for autoplay, so a listener who had paused and then pressed Next onto a file the platform cannot decode had the player walk past it and start the following track out loud; the chain now re-loads with the intent the transport was last given, so a paused player stays paused (and a press on play starts it) while a playing one still skips through and keeps playing, `ended`, a row tap and the give-up message are unchanged, and the rendered frame is identical pixel for pixel.

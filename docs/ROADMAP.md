@@ -816,7 +816,7 @@ snapshot of both builds, so nothing visible moved.
   with the same visible line and the same "Stopped after 3 unplayable tracks." status. 64 elements
   x 39 computed properties plus their bounding rects, and the rendered 420x900 frame (0 of 378,000
   pixels differ), hash identically against 7.2. The page goes from 73,342 to 74,528 bytes.
-- [ ] 61. Every slider's accessible name changes with its value.
+- [x] 61. Every slider's accessible name changes with its value.
   **Symptom.** Each slider sits inside a `<label>` whose text includes its own numeric readout, so
   the computed name is "Transparency 18%" and becomes "Transparency 40%" in the middle of a drag:
   measured in the accessibility tree of the 7.2 page, moving `#gl` from 18 to 40 changes the slider's
@@ -824,6 +824,24 @@ snapshot of both builds, so nothing visible moved.
   same reading. A screen reader re-announces a changed name on every step of the drag, which buries
   the value it is meant to be reading, and the name no longer identifies the control once it has
   moved. The same holds for `#bl`, `#hu`, `#dp`, `#tl`, `#pr`, `#gv` and `#sd`.
+  **Fixed in 7.4.** Each of the eight range inputs now carries a static `aria-label` holding just
+  the control's name ("Transparency", "Blur", "Colour shift", "Depth", "Tilt", "Parallax", "Light",
+  "Shadow"), which takes precedence over the `<label>` content that the readout was polluting; the
+  value stays on `aria-valuetext`, which already carried the unit. Measured in the accessibility
+  tree of the 7.3 page with the sheet open, moving each slider to 72% of its range changed its
+  computed name on all eight ("Transparency 18%" -> "Transparency 37%", "Blur 28" -> "Blur 43",
+  "Colour shift 250 degrees" -> "Colour shift 259 degrees" and so on); on the 7.4 page all eight
+  keep one name and the reading stays on `aria-valuetext` ("Transparency", value text "37%").
+  Nothing on screen moves: the attribute is not rendered, no stylesheet selects on it, and the
+  rendered 420x900 frame is identical to the 7.3 page pixel for pixel (0 of 378,000 pixels differ)
+  both on the card and with the sheet open, where 33 elements x 28 computed properties plus their
+  bounding rects hash identically. The behaviour harness reports what the 7.3 page reports: picking
+  (3 rows, an exact repeat leaves 3, the same name with a different size is accepted as a 4th),
+  the title swap on a row jump (`Alpha` -> `Beta`) and on a skip (`Gamma`), row reuse (node identity
+  across the skip), the debounced settings write (`#gl` at 30 lands `glass:30` in
+  `glass.settings.v1` and nothing is written synchronously), the back chain (`true`, `true`,
+  `false`), and the flat and tilted `elementFromPoint` hit-tests (all six controls resolving to
+  themselves). The page goes from 74,528 to 75,167 bytes.
 - [ ] 62. The playlist has no accessible name, and "Playlist" is not a heading.
   **Symptom.** `#list` is `role="list"` with no name of its own and the visible "Playlist" above it
   is a plain `div`, so the accessibility tree of the 7.2 page exposes an unnamed list: a
