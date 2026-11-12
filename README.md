@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 7.5 — the playlist and the card header are sections a screen reader can name and jump to
+
+- `#list` was an unnamed `role="list"` and the visible "Playlist" above it was a plain `div`, so the accessibility tree exposed a list with no name and no heading to jump to, and "Now Playing" was a plain `b`; the two labels now carry `role="heading" aria-level="2"` and the list is named by its own label, so the tree reads "Now Playing", the track title and "Playlist" as three level-2 headings with the list named "Playlist", while no attribute is rendered, no stylesheet selects on them, and the rendered frame is identical pixel for pixel in the player, playlist and sheet states.
+
 ### 7.4 — each settings slider keeps one accessible name while it moves
 
 - every slider sat inside a `<label>` whose text included its own numeric readout, so its computed name changed on every step of a drag ("Transparency 18%" became "Transparency 40%") and a screen reader re-announced a new name over the value it was reading; each of the eight range inputs now carries a static `aria-label` with just the control's name, the reading stays on `aria-valuetext`, and the rendered frame is identical pixel for pixel.

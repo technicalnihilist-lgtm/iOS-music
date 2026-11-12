@@ -842,10 +842,28 @@ snapshot of both builds, so nothing visible moved.
   `glass.settings.v1` and nothing is written synchronously), the back chain (`true`, `true`,
   `false`), and the flat and tilted `elementFromPoint` hit-tests (all six controls resolving to
   themselves). The page goes from 74,528 to 75,167 bytes.
-- [ ] 62. The playlist has no accessible name, and "Playlist" is not a heading.
+- [x] 62. The playlist has no accessible name, and "Playlist" is not a heading.
   **Symptom.** `#list` is `role="list"` with no name of its own and the visible "Playlist" above it
   is a plain `div`, so the accessibility tree of the 7.2 page exposes an unnamed list: a
   screen-reader user hears "list" without learning what it holds, and cannot reach the playlist by
   heading navigation, which is the only way to skip the transport controls. "Now Playing" at the top
   of the card is a plain `b` for the same reason, while the track title under it is the page's only
   heading, so the outline reads as a single heading with no sections around it.
+
+  **Fixed in 7.5.** `#list` takes `aria-labelledby` pointing at its own label, and the two labels
+  become headings without becoming new elements: "Now Playing" and "Playlist" each carry
+  `role="heading" aria-level="2"` on the node that was already there, so no tag, class, style or
+  text changes. Measured in the accessibility tree of the 7.4 page with three tracks picked: the
+  list node's name was the empty string and the only heading was the track title ("2:Beta"); on
+  the 7.5 page the tree carries `heading` "Now Playing" at level 2, the track title at level 2 and
+  `heading` "Playlist" at level 2, and the `list` node's name is "Playlist". Nothing on screen
+  moves: neither attribute is rendered, no stylesheet selects on `[role]`, `[aria-level]` or
+  `#listLabel`, and 117 elements x 47 computed properties plus their bounding rects hash
+  identically at startup and 140 elements x 29 of them with three rows picked and the sheet open,
+  the rendered 420x900 frame differing in 0 of 378,000 pixels in all three states (player,
+  playlist, sheet). The behaviour harness reports what the 7.4 page reports: picking (3 rows, an
+  exact repeat leaves 3, the same name with a different size is accepted as a 4th), the title
+  after a row jump (`Beta`), row reuse (node identity across a jump), the debounced settings write
+  (`#gl` at 30 lands `glass:30` in `glass.settings.v1` and nothing is written synchronously), the
+  back chain (`true`, `true`, `false`), and the flat and tilted `elementFromPoint` hit-tests (all
+  six controls resolving to themselves). The page goes from 75,167 to 75,270 bytes.
