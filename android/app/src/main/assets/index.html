@@ -666,6 +666,25 @@ let sheetTimer=null;
    the :focus-visible ring when the last input was the keyboard, so a pointer or touch user sees
    the same pixels as before. */
 let sheetFocus=optBtn;   /* the sheet's only opener: the fallback when nothing held focus */
+/* The sheet is declared `aria-modal`, but the card behind the scrim stayed in the accessibility
+   tree: a screen reader in browse mode could still read and activate `#pp`, `#next`, `#prev` and
+   the playlist rows underneath a player the sheet is supposed to be covering. The card is now
+   taken out of that tree for exactly as long as the sheet is open - with `inert`, which removes
+   the subtree and refuses it focus, where the WebView has it, and with `aria-hidden` on the same
+   node where it does not. Either one has to drop the opener's focus on the way in: Chrome will not
+   apply a bare `aria-hidden` to a subtree that still contains the focused node, and an inert
+   subtree cannot hold focus at all. That costs the opener nothing a keyboard user can feel - the
+   Tab trap already sent its Tab to the sheet's first control, and it still does - and the close
+   still restores that control, so the keyboard path is byte for byte the one it was. Neither
+   attribute is read by a selector, so nothing is laid out, painted or animated differently, and a
+   pointer or touch user's focus and ring state are what they were. */
+const hasInert='inert' in HTMLElement.prototype;
+function cardModal(on){
+  if(hasInert)app.inert=on;
+  else if(on)app.setAttribute('aria-hidden','true');
+  else app.removeAttribute('aria-hidden');
+  if(on){const a=document.activeElement;if(a&&a!==document.body&&app.contains(a))a.blur()}
+}
 function openSheet(){
   if(sheetTimer){clearTimeout(sheetTimer);sheetTimer=null}  /* reopen mid-close: cancel the hide */
   const a=document.activeElement;                            /* keep the previous opener if this one has none */
@@ -673,10 +692,12 @@ function openSheet(){
   sheet.classList.remove('out');sheet.classList.add('show');restart(sheet,'in');
   scrim.classList.add('on');
   optBtn.setAttribute('aria-expanded','true');
+  cardModal(true);                                           /* the card is covered: out of the tree */
 }
 function closeSheet(restoreFocus=true){
   if(!sheet.classList.contains('show')||sheet.classList.contains('out'))return;
   if(sheetTimer){clearTimeout(sheetTimer);sheetTimer=null}
+  cardModal(false);                                          /* readable again before focus goes back */
   const a=document.activeElement,had=a===null||a===document.body||sheet.contains(a);
   sheet.classList.remove('in');sheet.classList.add('out');scrim.classList.remove('on');
   optBtn.setAttribute('aria-expanded','false');

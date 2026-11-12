@@ -76,6 +76,11 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 7.2 — the settings sheet takes the player behind it out of the accessibility tree
+
+- the sheet is declared `aria-modal` and traps Tab, but the card behind the scrim stayed in the accessibility tree, so a screen reader in browse mode could still read and activate `#pp`, `#next`, `#prev` and the playlist rows of a player the sheet was covering; the card is now marked `inert` (or `aria-hidden` where the WebView has no `inert`) for exactly as long as the sheet is open and cleared before focus is handed back, the opener's focus is dropped on the way in because Chrome will not hide a subtree that still holds it — the Tab trap already went to the sheet's first control and still does, and the close still restores the opener — and 34 elements x 24 computed properties and their rects hash identically at six stages, so nothing visible changed.
+
+
 ### 7.1 — collapsing the player no longer strands keyboard focus
 
 - `closeApp()` hid the card and showed the bubble, and `openApp()` did the reverse, without moving focus, so a press on `#closeBtn` left `document.activeElement` inside the card that had just been set to `display:none` and a press on the bubble left it on the bubble `openApp()` had just hidden — a keyboard or switch-access user was dropped to the document with no control under focus; the close now remembers the node focus was on and hands it to the bubble when the card is actually hidden, reopening focuses that node again (or `#closeBtn`), and both moves are gated on the last input being the keyboard so a tap never paints a focus ring, leaving nothing visible changed.

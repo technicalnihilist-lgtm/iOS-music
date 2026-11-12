@@ -771,32 +771,31 @@ snapshot of both builds, so nothing visible moved.
   press on it, `document.activeElement` is the bubble, which `openApp()` has just hidden. Either
   way a keyboard or switch-access user is dropped to the document with no control under focus and
   has to tab in from the top to get back to the player.
-- [ ] 59. The settings sheet is declared `aria-modal` but the player behind the scrim stays in the
+- [x] 59. The settings sheet is declared `aria-modal` but the player behind the scrim stays in the
   accessibility tree.
   **Symptom.** The sheet carries `aria-modal="true"` and contains Tab, so it behaves as a modal for
   a keyboard, but nothing takes the card behind it out of the accessibility tree: a screen reader
   in browse mode can still read and activate `#pp`, `#next`, `#prev` and the playlist rows under the
   scrim, operating a player the sheet is supposed to be covering.
-  **Fixed in 7.1.** `closeApp()` now remembers the node focus was on (skipping anything inside the
-  sheet, which stays shut, so it falls back to `#closeBtn`), and the bubble takes focus at the moment
-  the card is actually hidden - inside the existing 520 ms timer, when it is the only rendered
-  control left - but only if the collapse left focus inside the hidden card or nowhere, so a close
-  never pulls focus off something the user has since moved to. `openApp()` hands focus back to that
-  remembered node, or to `#closeBtn` when there was none, as soon as the card is rendered again.
-  Both moves use `preventScroll`, and both are gated on `kbInput`, a flag set by a `keydown` and
-  cleared by any `pointerdown`/`touchstart`/`mousedown` in the capture phase: a script focus after a
-  tap can paint the 2px `:focus-visible` ring, which would be a visible change, so a pointer user
-  keeps exactly the behaviour and pixels it had while a keyboard or switch user gets a rendered
-  control under focus. Measured in headless Chromium with the same harness run against the 7.0 and
-  7.1 pages: focus on `#closeBtn`, press, 850 ms later, 7.0 leaves `document.activeElement` on
-  `#closeBtn` with `getClientRects().length === 0` (a node inside a `display:none` card) and 7.1
-  leaves it on `#bubble`, rendered; reopening with Enter on the bubble lands on `#closeBtn` in both,
-  rendered in both; the pointer path reports the same `activeElement` and the same ring state on the
-  two pages. Picking (3 rows, a repeat pick leaves 3), the title swap on a row jump (`Beta`), row
-  reuse (node identity across a skip), `aria-current`, the debounced settings write (a `#gl` drag to
-  30 lands `glass:30` in `glass.settings.v1`), the back chain (`true`, `true`, `false`) and the flat
-  and tilted `elementFromPoint` hit-tests (all six controls resolving to themselves) report what the
-  7.0 page reports. The two pages were loaded side by side in one browser and snapshotted together
-  at startup, 600 ms in, with the sheet open and after a pick plus a row jump - 34 elements x 22
-  properties - and every stage hashes identically (0 differing elements). The page goes from 69,048
-  to 71,698 bytes.
+  **Fixed in 7.2.** `openSheet()` now takes the card out of the accessibility tree for exactly as
+  long as the sheet is open, and `closeSheet()` puts it back before it hands focus anywhere.
+  `cardModal()` uses `inert` where the WebView has it (Chrome 102+) and `aria-hidden="true"` on the
+  same node where it does not; `inert` also refuses the subtree focus, which is why Chrome will not
+  apply a bare `aria-hidden` to a subtree that still contains the focused node, and why the opener's
+  focus is dropped on the way in. Nothing is lost by that: the Tab trap already sent the opener's
+  Tab to the sheet's first control and still does (`#gl`), and `Done`, Escape and the scrim still
+  restore that opener on close, where its ring comes back. Neither attribute is read by a selector,
+  so no layout, paint or transition changes: measured in headless Chromium against the 7.1 and 7.2
+  pages, 34 elements x 24 computed properties plus their bounding rects, at startup, 600 ms in,
+  after a pick plus a row jump, with the sheet open, with it closed and collapsed to the bubble,
+  hash identically (0 differing values), and the pointer path leaves `document.activeElement` and
+  the ring state on the two pages the same. The accessibility tree is where the change shows: with
+  the sheet open by pointer and by Enter, `#pp`, `#next`, `#prev`, `#closeBtn`, `#optBtn` and every
+  `listitem` are gone from it (7.1 reports all five buttons), the sheet's own controls are still
+  there, and closing restores the player to the tree; the same holds with
+  `HTMLElement.prototype.inert` deleted, where the card carries `aria-hidden="true"` and is equally
+  absent. Picking (3 rows, a repeat pick leaves 3), the title swap on a row jump (`Beta`), row reuse
+  (node identity across a skip), the debounced settings write (`#gl` dragged to 30 lands `glass:30`
+  in `glass.settings.v1`), the back chain (`true`, `true`, `false`) and the flat and tilted
+  `elementFromPoint` hit-tests (all six controls resolving to themselves) report what the 7.1 page
+  reports. The page goes from 71,705 to 73,342 bytes.
