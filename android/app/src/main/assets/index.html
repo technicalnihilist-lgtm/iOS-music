@@ -258,6 +258,14 @@ let dragging=false;    // the user is scrubbing the seek bar
 let fails=0;           // consecutive tracks that refused to play
 const MAX_SKIP=3;      // how many consecutive unplayable tracks the skip chain may walk
 let stopped=false;     // the skip chain gave up and reported; a trailing play() rejection must not talk over it
+/* The last transport intent - play (true) or pause (false) - which is not the same thing as
+   `playing` below: that is the state painted on the card, and a source swap clears it for a moment
+   while the new track settles. The skip chain in `au.onerror` used to pass a hard `true` for
+   autoplay, so an unplayable file resumed playback the listener had deliberately paused: pause,
+   then Next onto a file the platform will not decode, and the player walked past it and started
+   the following track out loud. Every load that asks for playback sets this, every deliberate
+   pause clears it, and the chain now asks for exactly what the transport last asked for. */
+let wantPlay=false;
 /* One pending clear of `switching`, owned by whichever load armed it last. Every load used to
    start its own 700 ms timer and never cancel the previous one, so an earlier load's timer fired
    while a later source was still settling and dropped the guard under it - the queued pause of
@@ -340,6 +348,7 @@ function playRefused(err){
 }
 function attemptPlay(onOk){
   stopped=false;               /* any fresh attempt gets a fresh budget of announcements */
+  wantPlay=true;               /* an explicit request to play, for the skip chain to honour */
   pauseAsked=false;            /* a play request supersedes a pause that has not landed yet */
   let p;
   try{p=au.play()}catch(e){playRefused(e);return}
@@ -403,6 +412,7 @@ function resetSeek(){
 }
 
 function load(i,autoplay,dir){
+  wantPlay=!!autoplay;         /* what this load was asked for, so a failed one can be retried in kind */
   if(!tracks.length){
     EL.title.textContent='No songs yet';
     EL.artist.textContent='Add songs from your phone';
@@ -455,7 +465,7 @@ function load(i,autoplay,dir){
 /* transport */
 /* Every deliberate pause goes through here, so `onpause` can tell the user's pause apart from the
    one swapping a source fires (see the guard there). */
-function requestPause(){pauseAsked=true;au.pause()}
+function requestPause(){pauseAsked=true;wantPlay=false;au.pause()}
 ppBtn.onclick=()=>{if(!tracks.length){fileInput.click();return}au.paused?attemptPlay():requestPause()};
 nextBtn.onclick=()=>{if(!tracks.length){fileInput.click();return}load(idx+1,!au.paused||au.ended,1)};
 prevBtn.onclick=()=>{
@@ -480,6 +490,7 @@ au.onpause=()=>{
      one inside the window is ignored. */
   if(switching&&!pauseAsked)return;
   pauseAsked=false;
+  wantPlay=false;              /* the listener stopped it (or the shell did): nothing should restart it */
   setShellPlaying(false);
   setPlaying(false);
   restart(ppBtn,'bump');
@@ -497,11 +508,12 @@ au.onerror=()=>{
      say so. The visible copy is the message the path already showed; the specifics go to the
      off-screen status region, so nothing on screen moves. */
   if(tracks.length>1&&fails<MAX_SKIP){
-    load(idx+1,true,1);
+    load(idx+1,wantPlay,1);    /* keep walking, but only towards playback the listener asked for */
   }else{
     const n=fails;
     fails=0;
     stopped=true;
+    wantPlay=false;            /* the chain has stopped; a later error must not start anything */
     swapToken++;                 /* cancel a title swap still queued from the last attempt, or it lands after this message and replaces it */
     if(tracks[idx])paintTrack(tracks[idx]);   /* ...but paint the block now, so it names the track this gave up on */
     setPlaying(false);
