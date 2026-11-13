@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 7.7 — five duplicated node handles collapse into the ones the page already cached
+
+- the colour-shift slider, the artwork box and the sway wrapper each kept a second handle to a node the page already holds (`$('hu')` beside `EL.hu`, `$('art')` beside `EL.art`, `.drift` under both `driftEl` and `driftField`), the picker's handler re-resolved `#file`, and `openApp()` looked up `#closeBtn` on every reopen from the bubble; every site now points at the existing handle, `#closeBtn`, `#addBtn` and `#resetBtn` join the startup cache beside `#file`/`#next`/`#prev`/`#optBtn`, and nothing on screen moves — the markup and stylesheet are byte-identical outside the script, and the computed-style/rect hash and the rendered frame match 7.6 in the player, playlist and sheet states.
+
 ### 7.6 — a player that gives up on unplayable files tells the lock screen it stopped
 
 - the skip chain's give-up branch painted the stop and told the Android shell to drop audio focus, but it never wrote `navigator.mediaSession.playbackState` — the one stop in the page that fires no pause event of its own — so the lock screen and the media notification kept showing "playing" over a player that had already stopped; that write now goes through a single `setSessionPlaying()` helper beside `setShellPlaying()`, used by `onplay`, `onpause`, the refused-play path and the give-up branch, so the state reads "paused" the moment the chain stops, an ordinary play/pause still reports playing and paused, and the rendered frame is identical pixel for pixel.

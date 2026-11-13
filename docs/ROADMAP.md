@@ -902,7 +902,7 @@ snapshot of both builds, so nothing visible moved.
   survives a reload), the back chain (`true`, `true`, `false`) and the flat and tilted
   `elementFromPoint` hit-tests (all six controls resolving to themselves). The page goes from
   75,270 to 75,898 bytes.
-- [ ] 64. Five more places hold a second handle to a node the page already caches, and `openApp()`
+- [x] 64. Five more places hold a second handle to a node the page already caches, and `openApp()`
   re-resolves `#closeBtn` on every reopen.
   **Symptom.** Items 45 and 50 swept the per-press document lookups but missed these:
   `const huEl=$('hu')` at the colour-shift slider duplicates `EL.hu`, which `paintTrack()` already
@@ -916,3 +916,27 @@ snapshot of both builds, so nothing visible moved.
   existing handle, add `#addBtn`/`#resetBtn` to the startup cache the way `#file`, `#next`, `#prev`
   and `#optBtn` already are, and keep one name for `.drift`. Verify with the behaviour harness, the
   flat and tilted hit-tests and the computed-style/pixel comparison; nothing rendered can change.
+  **Fixed in 7.7.** Every site now points at the handle the page already had, so no node is
+  reachable by two names: the colour-shift slider's own `$('hu')` is gone and its `input` handler
+  writes `EL.hu`/`EL.huV`, the artwork's second `$('art')` is gone and `measureTilt()` and the four
+  touch listeners use `EL.art`, `.drift` is held once as `driftEl` (resolved at startup) instead of
+  twice as `driftEl` and the lazily resolved `driftField` that `syncBlobs()` used to re-query, the
+  picker's handler is `fileInput.onchange` rather than a fresh `$('file')`, and `#closeBtn`,
+  `#addBtn` and `#resetBtn` join `#file`, `#next`, `#prev` and `#optBtn` in the startup cache -
+  `openApp()`'s focus fallback and `closeApp`'s binding use that one handle, so reopening the card
+  from the bubble no longer does a document lookup, and the reset statement no longer resolves the
+  same button twice. Nothing rendered can move: the markup and the stylesheet are byte-identical
+  outside the `<script>` block (18,315 bytes of head and 18 bytes of tail compare equal), and in
+  headless Chromium at 420x900, deviceScaleFactor 2, with animations off for a stable capture, 118
+  elements x 36 computed properties plus their bounding rects hash identically to the 7.6 page in
+  the player state, the same 118 with the sheet open, and 141 with three rows picked and the sheet
+  open - each state's 7.7 hash is one the 7.6 page itself produced on a repeat run, the run-to-run
+  spread being the sway's phase, and the rendered frame matches the 7.6 frame in all three states
+  (player and playlist identical to the 7.6 control capture, the sheet identical across all three
+  captures). The behaviour harness reports what the 7.6 page reports: picking (3 rows, an exact
+  repeat leaves 3, the same name with a different size is accepted as a 4th), the title after a row
+  jump (`Beta`, and `Gamma` after the next one), row reuse (node identity across a jump, `cur` on
+  row 2), the debounced settings write (`#gl` at 30 lands `glass:30` in `glass.settings.v1` with
+  nothing written synchronously), the back chain (`true`, `true`, `false`) and the flat and tilted
+  `elementFromPoint` hit-tests (all six controls resolving to themselves). The page goes from
+  75,898 to 76,766 bytes.

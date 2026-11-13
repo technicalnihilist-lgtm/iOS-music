@@ -247,6 +247,11 @@ const fileInput=$('file'),nextBtn=$('next'),prevBtn=$('prev');
    two document lookups for one open plus one close - although the node has not moved since the page
    loaded. Resolved once here instead, beside the picker and the two skip buttons. */
 const optBtn=$('optBtn');
+/* The three controls below are never replaced either, but each was looked up again at its use
+   site: `closeBtn` once at startup and once more inside `openApp()`'s focus fallback - a
+   document lookup on every reopen of the card from the bubble - `addBtn` once at startup, and
+   `resetBtn` twice in the same statement. Resolved once here instead. */
+const closeBtn=$('closeBtn'),addBtn=$('addBtn'),resetBtn=$('resetBtn');
 const tracks=[];
 /* Every object URL this page creates is owned here, so the blobs can be released on teardown. */
 const objUrls=new Set();
@@ -606,12 +611,16 @@ document.addEventListener('visibilitychange',()=>{dragging=false;if(document.hid
    the whole card, is part of the same subtree and is frozen the same way - it was missed before,
    so the sway stayed live over a subtree whose only child is `display:none` once collapsed. */
 const blobField=document.querySelector('.blobs');
-let driftField=null,collapsed=false;
+/* `.drift`, the wrapper carrying the 17s sway around the card, is also the node `applyS()`
+   toggles `off` on. It was held under two names - `driftField` here and `driftEl` further down,
+   one resolved lazily and one at startup - so the same element had two handles that could drift
+   apart. One name, `driftEl`, resolved once. */
+const driftEl=document.querySelector('.drift');
+let collapsed=false;
 function syncBlobs(){
   const frozen=collapsed||document.hidden;
   if(blobField)blobField.classList.toggle('paused',frozen);
-  driftField=driftField||document.querySelector('.drift');
-  if(driftField)driftField.classList.toggle('paused',frozen);
+  if(driftEl)driftEl.classList.toggle('paused',frozen);
 }
 function setCollapsed(v){collapsed=v;syncBlobs()}
 document.addEventListener('visibilitychange',syncBlobs);
@@ -644,7 +653,7 @@ function openApp(){
   const a=document.activeElement;
   if(kbInput&&(a===null||a===document.body||a===bubble)){
     let t=cardFocus;
-    if(!t||t===app||!document.contains(t)||t.closest('.sheet'))t=$('closeBtn');
+    if(!t||t===app||!document.contains(t)||t.closest('.sheet'))t=closeBtn;
     try{t.focus({preventScroll:true})}catch(e){t.focus()}
   }
 }
@@ -673,7 +682,7 @@ function closeApp(){
 let kbInput=false;
 addEventListener('keydown',()=>{kbInput=true},true);
 ['pointerdown','touchstart','mousedown'].forEach(ev=>addEventListener(ev,()=>{kbInput=false},true));
-$('closeBtn').onclick=closeApp;
+closeBtn.onclick=closeApp;
 bubble.onclick=openApp;
 /* The bubble is the only way back into a collapsed player, so it must answer the keyboard the
    way a button does: Enter and Space activate it. A native button would also fire click on those
@@ -831,7 +840,6 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)flushS()});
 const REDUCED=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const motionOff=()=>REDUCED||S.motion==='off';
 
-const driftEl=document.querySelector('.drift');
 const driftBtn=$('driftBtn');
 /* The motion segment's three buttons are never replaced, and the mode they show only changes when
    the user picks one. Resolved once here, with the mode last painted, so applyS() can skip the
@@ -926,13 +934,14 @@ Object.keys(SL).forEach(id=>{
 });
 
 /* colour shift stays tied to the current track */
-const huEl=$('hu');
-if(huEl){
-  huEl.oninput=()=>{
-    huEl.style.setProperty('--p',(huEl.value/360*100)+'%');
-    root.setProperty('--h',huEl.value);
-    EL.huV.textContent=huEl.value+'°';
-    setVT(huEl,vtOf('hu',huEl.value));
+/* The colour-shift slider is `EL.hu`, the same handle `paintTrack()` writes; it used to keep a
+   second `$('hu')` of its own. */
+if(EL.hu){
+  EL.hu.oninput=()=>{
+    EL.hu.style.setProperty('--p',(EL.hu.value/360*100)+'%');
+    root.setProperty('--h',EL.hu.value);
+    EL.huV.textContent=EL.hu.value+'°';
+    setVT(EL.hu,vtOf('hu',EL.hu.value));
   };
 }
 
@@ -941,7 +950,7 @@ if(segEl)segEl.onclick=e=>{
   S.motion=b.dataset.m;applyS();saveS();
 };
 if(driftBtn)driftBtn.onclick=()=>{S.drift=S.drift?0:1;applyS();saveS()};
-if($('resetBtn'))$('resetBtn').onclick=()=>{
+if(resetBtn)resetBtn.onclick=()=>{
   S=Object.assign({},DEF);
   Object.keys(SL).forEach(syncSlider);
   applyS();saveS();
@@ -1017,10 +1026,11 @@ window.addEventListener('pointermove',e=>{
    The box is measured once per gesture at touchstart and the rect reused for every move:
    reading it inside touchmove forced a synchronous layout on each frame of the drag.
    The cache is dropped whenever the card can have moved under the finger. */
-const artBox=$('art');
+/* The artwork box is `EL.art` - the node `load()` paints. It used to be re-resolved here under a
+   second name. */
 let tiltRect=null;
 function measureTilt(){
-  const r=artBox.getBoundingClientRect();
+  const r=EL.art.getBoundingClientRect();
   tiltRect=(r.width&&r.height)?r:null;
   return tiltRect;
 }
@@ -1032,7 +1042,7 @@ function touchTilt(e,r){
   tg.y=clamp((t.clientY-(r.top+r.height/2))/(r.height/2),-1,1);
   kick();
 }
-if(artBox){
+if(EL.art){
   const canTilt=()=>!motionOff()&&!(S.motion==='auto'&&hasGyro);
   const tStart=e=>{if(!canTilt())return;touchTilt(e,measureTilt())};
   const tMove=e=>{if(!canTilt())return;touchTilt(e,tiltRect)};
@@ -1043,10 +1053,10 @@ if(artBox){
     if(!(S.motion==='auto'&&hasGyro)){tg.x=0;tg.y=0;kick()}
   };
   const tDrop=()=>{tiltRect=null};
-  artBox.addEventListener('touchstart',tStart,{passive:true});
-  artBox.addEventListener('touchmove',tMove,{passive:true});
-  artBox.addEventListener('touchend',relax,{passive:true});
-  artBox.addEventListener('touchcancel',relax,{passive:true});
+  EL.art.addEventListener('touchstart',tStart,{passive:true});
+  EL.art.addEventListener('touchmove',tMove,{passive:true});
+  EL.art.addEventListener('touchend',relax,{passive:true});
+  EL.art.addEventListener('touchcancel',relax,{passive:true});
   /* A rotation or resize moves the card's box out from under the finger. The cache was already
      dropped so the next move re-measures, but the *target* tilt was left where the last move put
      it, so the card held the pre-rotation angle with no finger on it whenever the gesture's end
@@ -1061,8 +1071,8 @@ if(artBox){
 applyS();
 
 /* own songs */
-$('addBtn').onclick=()=>fileInput.click();
-$('file').onchange=e=>{
+addBtn.onclick=()=>fileInput.click();
+fileInput.onchange=e=>{
   /* A cancelled picker does not always deliver an empty FileList: the Android WebView reports a
      back-out as `files === null`, and spreading that threw an uncaught TypeError every time the
      user dismissed the picker. Read it defensively - nothing picked means nothing to do, and the
