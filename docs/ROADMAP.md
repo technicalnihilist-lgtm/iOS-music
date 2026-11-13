@@ -972,7 +972,7 @@ snapshot of both builds, so nothing visible moved.
   `glass.settings.v1`), the back chain (`true`, `true`, `false`) and the flat and tilted
   `elementFromPoint` hit-tests (all six controls resolving to themselves). The page goes from
   76,766 to 77,448 bytes.
-- [ ] 66. The skip chain's three-failure budget is not reset by a track that plays, so it counts
+- [x] 66. The skip chain's three-failure budget is not reset by a track that plays, so it counts
   failures across unrelated good tracks.
   **Symptom.** `fails` is incremented in `au.onerror` and cleared only by the `onOk` callback that
   `load()` hands to `attemptPlay()` - and only when the load was asked to autoplay. A press of
@@ -982,10 +982,24 @@ snapshot of both builds, so nothing visible moved.
   up after one consecutive failure and the status region announces "Stopped after 3 unplayable
   tracks." over a playlist that has exactly one bad entry. The budget is meant to be consecutive
   failures, not a lifetime total.
-  **Not done yet.** Behaviour-identical except in the failure path: clear `fails` in `au.onplay`,
-  the one place a source has demonstrably started, so the counter always describes the run of
-  failures since the last successful start. Verify with the harness plus a scripted run of
-  error/good/error sources and check the announced count.
+  **Fixed in 7.9.** `fails` is now cleared in `au.onplay`, the one place a source has demonstrably
+  started, and the `onOk` callback that `load()` used to hand to `attemptPlay()` is gone with it -
+  it was the only caller, so the parameter and both of its call sites went too. Every successful
+  start resets the run, whichever path asked for it. Demonstrated with real media in headless
+  Chromium: a playlist of two undecodable files and one real WAV, picked in one go. The chain walks
+  Bad1 -> Bad2 -> Good on its own in both versions and lands on row 2 playing, so the ordinary
+  failure path is unchanged; but with the counter read from inside the page, 7.8 reports `fails: 2`
+  once Good is playing while 7.9 reports `fails: 0`. Pressing Next from there (one bad file, the
+  chain wraps to Bad1) is the difference: 7.8 reaches 3 on that single file, announces "Stopped
+  after 3 unplayable tracks." and stops playback over a playlist with one bad entry, while 7.9
+  counts 1, walks past it through Bad2 and back to Good, and is playing row 2 with an empty status
+  region. Nothing on screen changes: the harness reports what the 7.8 page reports - picking (3
+  rows, an exact repeat leaves 2, a same-name file of a different size is a 3rd), the title after a
+  row jump (`Beta`), row reuse (node identity across a jump, `cur` on row 1), the debounced settings
+  write (`#gl` at 30 lands `glass:30` in `glass.settings.v1`), the back chain (`true`, `true`,
+  `false`) and the flat and tilted `elementFromPoint` hit-tests (all six controls resolving to
+  themselves) - and the change is script-only, with no markup, stylesheet, copy or timing touched.
+  The page goes from 77,448 to 78,154 bytes.
 - [ ] 67. Three declarations are written twice, and the two reduced-motion blocks sit far apart.
   **Symptom.** `.bubble` declares `border-radius:50%` twice inside the same rule (once beside
   `width`/`height`, once after `color`), so an edit to the first is silently dead; `.blobs` is

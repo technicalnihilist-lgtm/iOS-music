@@ -373,14 +373,14 @@ function playRefused(err){
   if(stopped&&!denied)return;
   setBlocked(true,denied?ERR_BLOCKED:ERR_PLAY);
 }
-function attemptPlay(onOk){
+function attemptPlay(){
   stopped=false;               /* any fresh attempt gets a fresh budget of announcements */
   wantPlay=true;               /* an explicit request to play, for the skip chain to honour */
   pauseAsked=false;            /* a play request supersedes a pause that has not landed yet */
   let p;
   try{p=au.play()}catch(e){playRefused(e);return}
-  if(!p||typeof p.then!=='function'){if(onOk)onOk();return}
-  p.then(()=>{setBlocked(false,'');if(onOk)onOk()}).catch(playRefused);
+  if(!p||typeof p.then!=='function')return;
+  p.then(()=>setBlocked(false,'')).catch(playRefused);
 }
 
 const fmt=s=>{
@@ -484,7 +484,7 @@ function load(i,autoplay,dir){
     return;
   }
   if(autoplay){
-    attemptPlay(()=>{fails=0});
+    attemptPlay();
     /* the pause event from swapping the source is queued, not immediate. One handle, re-armed by
        each load, so an earlier load's window cannot close over a later one; a load that does not
        autoplay has nothing to guard against and leaves no timer behind. */
@@ -506,6 +506,15 @@ prevBtn.onclick=()=>{
 };
 
 au.onplay=()=>{
+  /* A source has demonstrably started, so the run of failures is over. This is the only place
+     the budget can be cleared honestly: it used to be reset by a callback `load()` handed to
+     `attemptPlay()`, and only when that load had asked for autoplay - a press of `#pp` or a tap
+     on the current row started playback without clearing anything, so `fails` described a
+     lifetime total instead of a run of consecutive failures. Two unplayable files, then one that
+     plays, then a single bad one reached the budget of three and announced "Stopped after 3
+     unplayable tracks." over a playlist with one bad entry. Cleared on the media event itself,
+     every successful start - whichever path asked for it - resets the chain. */
+  fails=0;
   setPlaying(true);
   restart(ppBtn,'bump');
   setSessionPlaying(true);

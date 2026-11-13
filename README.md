@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 7.9 — the skip chain's failure budget counts consecutive failures again, not a lifetime total
+
+- `fails` was cleared only by the callback `load()` handed to `attemptPlay()` and only on a load that asked for autoplay, so a track started by the transport left the counter where the last failure put it: two unplayable files, then one that plays, then a single bad one reached the budget of three and announced "Stopped after 3 unplayable tracks." over a playlist with one bad entry; it is now cleared in `au.onplay`, the one place a source has demonstrably started, the dead `onOk` plumbing is gone with it, and the harness shows the same behaviour everywhere else with real media in the skip chain (two bad files and a real WAV: 7.8 read `fails: 2` once the good track played and gave up on the next single failure, 7.9 reads `fails: 0` and walks past it).
+
 ### 7.8 — reduced motion stops the two endless loops instead of running them a hundred times a second
 
 - `prefers-reduced-motion` shortened every animation to 0.01s but left `infinite` on the 14s blob float and the 0.9s equaliser, turning both into 100Hz loops in the one mode meant to remove motion; they are now stopped, the equaliser keeps a static 16px height so the playing row still reads as playing, and the stylesheet outside the media query is byte-identical, with the computed-style/rect hash and the rendered frame matching 7.7 in the player and sheet states.
