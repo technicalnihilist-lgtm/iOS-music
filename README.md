@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 7.8 — reduced motion stops the two endless loops instead of running them a hundred times a second
+
+- `prefers-reduced-motion` shortened every animation to 0.01s but left `infinite` on the 14s blob float and the 0.9s equaliser, turning both into 100Hz loops in the one mode meant to remove motion; they are now stopped, the equaliser keeps a static 16px height so the playing row still reads as playing, and the stylesheet outside the media query is byte-identical, with the computed-style/rect hash and the rendered frame matching 7.7 in the player and sheet states.
+
 ### 7.7 — five duplicated node handles collapse into the ones the page already cached
 
 - the colour-shift slider, the artwork box and the sway wrapper each kept a second handle to a node the page already holds (`$('hu')` beside `EL.hu`, `$('art')` beside `EL.art`, `.drift` under both `driftEl` and `driftField`), the picker's handler re-resolved `#file`, and `openApp()` looked up `#closeBtn` on every reopen from the bubble; every site now points at the existing handle, `#closeBtn`, `#addBtn` and `#resetBtn` join the startup cache beside `#file`/`#next`/`#prev`/`#optBtn`, and nothing on screen moves — the markup and stylesheet are byte-identical outside the script, and the computed-style/rect hash and the rendered frame match 7.6 in the player, playlist and sheet states.

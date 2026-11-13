@@ -103,7 +103,18 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 :where(button,[href],input,select,textarea,[tabindex]):focus-visible{outline:2px solid var(--tx);outline-offset:3px;border-radius:inherit}
 input[type=range]:focus-visible{outline:2px solid var(--tx);outline-offset:6px;border-radius:10px}
 .ctl:focus-visible{border-radius:14px}
-@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important}}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01s!important}
+  /* The blanket rule above is meant to make the entrances arrive at once, but it also shortens the
+     two loops that never end: the 14 s blob float and the 0.9 s equaliser became 0.01 s animations
+     with `infinite` still on them, i.e. a hundred iterations a second - the one mode whose whole
+     purpose is to remove motion got more of it than any other, and kept a compositor busy behind
+     the glass for as long as the player was open. The sway below was stopped by its own rule and
+     these two were not. Stop them too; the equaliser keeps a height so the playing row still reads
+     as playing. */
+  .blobs i,.eq i{animation:none!important}
+  .eq i{height:16px}
+}
 
 /* ---------- 4D depth ---------- */
 .tilt{position:relative;display:grid;place-items:center;

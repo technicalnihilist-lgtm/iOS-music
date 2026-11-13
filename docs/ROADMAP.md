@@ -940,3 +940,59 @@ snapshot of both builds, so nothing visible moved.
   nothing written synchronously), the back chain (`true`, `true`, `false`) and the flat and tilted
   `elementFromPoint` hit-tests (all six controls resolving to themselves). The page goes from
   75,898 to 76,766 bytes.
+
+## Backlog added after the 64 items above were cleared (found 2026-11-13)
+
+- [x] 65. `prefers-reduced-motion` makes the two endless loops run a hundred times a second instead
+  of stopping them.
+  **Symptom.** The reduced-motion block is a blanket `*{animation-duration:.01s!important}`, written
+  for the entrances (popIn, sheetIn, artSwap) that should arrive at once. Two animations in the page
+  never end - the 14 s `float` on the three background blobs and the 0.9 s `eq` on the playing row's
+  equaliser - and the blanket rule only shortens them: `animation-iteration-count` is still
+  `infinite`, so each becomes a 10 ms loop, i.e. 100 iterations a second, for as long as the player
+  is open. Measured in headless Chromium with `--force-prefers-reduced-motion` on the 7.7 page:
+  `getComputedStyle(document.querySelector('.blobs i'))` reports `animation-name: float`,
+  `animation-duration: 0.01s`, `animation-iteration-count: infinite`, and the same for `.eq i`. The
+  17 s sway is the only loop that is actually stopped, because it has a rule of its own further down
+  the sheet (`.drift{animation:none!important}`) - so the one mode whose purpose is to remove motion
+  has more of it than any other, and keeps a compositor busy behind the glass the whole time.
+  **Fixed in 7.8.** The reduced-motion block now stops those two loops as well:
+  `.blobs i,.eq i{animation:none!important}`, with `.eq i{height:16px}` so the equaliser still reads
+  as "this row is playing" once its motion is gone (without a height the bars, whose height came
+  only from the keyframes, would collapse to nothing). Measured on the 7.8 page under the same flag:
+  both report `animation-name: none` where 7.7 reported `float`/`eq` at 0.01 s infinite, the
+  equaliser's computed height is a static 16px, and the playing state is unchanged (`playing` class
+  on, `#pp` `aria-pressed` "true"). Nothing changes for anyone else: the rule lives inside the media
+  query, the stylesheet outside it is byte-identical, and in ordinary mode the computed-style/rect
+  hash of 119 elements (player state `ba4de5d5`, sheet open `8d70e6b0`) and the rendered 412x892
+  frame at deviceScaleFactor 2 match 7.7 exactly, stable across repeats. The behaviour harness
+  reports what the 7.7 page reports: picking (3 rows, an exact repeat leaves 3, a same-name file of
+  a different size is a 4th), the title after a row jump (`Beta`, then `Gamma`), row reuse (node
+  identity across a jump), the debounced settings write (`#gl` at 30 lands `glass:30` in
+  `glass.settings.v1`), the back chain (`true`, `true`, `false`) and the flat and tilted
+  `elementFromPoint` hit-tests (all six controls resolving to themselves). The page goes from
+  76,766 to 77,448 bytes.
+- [ ] 66. The skip chain's three-failure budget is not reset by a track that plays, so it counts
+  failures across unrelated good tracks.
+  **Symptom.** `fails` is incremented in `au.onerror` and cleared only by the `onOk` callback that
+  `load()` hands to `attemptPlay()` - and only when the load was asked to autoplay. A press of
+  `#pp` (or a row tap on the current track) calls `attemptPlay()` with no callback, so a track that
+  starts perfectly well leaves the counter where the last failure put it. Play two unplayable files,
+  then one that works, then a single bad one, and `fails` reaches 3 on that one file: the chain gives
+  up after one consecutive failure and the status region announces "Stopped after 3 unplayable
+  tracks." over a playlist that has exactly one bad entry. The budget is meant to be consecutive
+  failures, not a lifetime total.
+  **Not done yet.** Behaviour-identical except in the failure path: clear `fails` in `au.onplay`,
+  the one place a source has demonstrably started, so the counter always describes the run of
+  failures since the last successful start. Verify with the harness plus a scripted run of
+  error/good/error sources and check the announced count.
+- [ ] 67. Three declarations are written twice, and the two reduced-motion blocks sit far apart.
+  **Symptom.** `.bubble` declares `border-radius:50%` twice inside the same rule (once beside
+  `width`/`height`, once after `color`), so an edit to the first is silently dead; `.blobs` is
+  declared in two separate blocks a hundred lines apart (position/filter in one, the 4D `transform`
+  in the other); and `prefers-reduced-motion` is handled by two blocks - one near the top that
+  shortens every animation, one further down that stops the sway - which is exactly why item 65's
+  two loops went unnoticed for so long. Nothing renders differently; the cost is that a rule that
+  looks authoritative can be overridden by another block with no visible connection to it.
+  **Not done yet.** Merge the duplicate declarations and the two media blocks, with no change to any
+  computed value: verify with the same computed-style/rect hash and rendered frame as item 65.
