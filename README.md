@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 8.3 — the settings writer is now one function, so a toggle after a slider drag no longer writes twice
+
+- `saveS()` carried its own copy of `writeS()`'s serialise-and-store body and never cleared `saveTimer`, so a discrete toggle (a motion mode, the drift switch, `Reset defaults`) made while a slider drag's 200 ms debounce was still armed wrote `glass.settings.v1` twice - once immediately and once with the same bytes on the timer - and any change to the key or the serialisation had to be made in both copies; `saveS()` now cancels the pending timer and writes through `writeS()`, the one writer, the markup and stylesheet are byte-identical to 8.2, and the harness reports the same picking, dedupe, row reuse, back chain and flat/tilted hit-tests while a write counter reads 1 write after a drag-then-toggle where 8.2 read 2.
+
 ### 8.2 — a reduced-motion setting changed while the player is open now reaches the 4D engine
 
 - `prefers-reduced-motion` was read once when the script first ran and cached in `REDUCED`, while the stylesheet's own media block is re-evaluated the moment the setting changes - so turning "Remove animations" off left the card flat and deaf to the gyroscope, the finger and the pointer until the app was restarted, and turning it on left the spring running frames the stylesheet was overriding; the query is now kept as a live `MediaQueryList` whose `change` event updates the cached answer (and settles the card flat when motion turns off), the markup and stylesheet are byte-identical to 8.1, a side-by-side computed-style/rect snapshot of both builds in one process shows 0 differences across all 127-141 elements in five states, and the harness reports the same picking, dedupe, row reuse, settings write, back chain and flat/tilted hit-tests.

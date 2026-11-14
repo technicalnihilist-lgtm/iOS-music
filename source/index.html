@@ -841,10 +841,17 @@ try{
 /* A slider fires `input` continuously during a drag, and each one serialised the whole settings
    object and wrote it to localStorage synchronously on the main thread, mid-gesture. Slider
    writes are now coalesced into at most one every 200 ms; discrete toggles still write at once.
-   A pending write is flushed when the page is hidden or torn down, so nothing is lost. */
+   A pending write is flushed when the page is hidden or torn down, so nothing is lost.
+   There is one writer. `saveS()` used to carry its own copy of the serialise-and-store body, so a
+   change to the key or the serialisation had to be made twice or the debounced and the immediate
+   path disagreed about what a saved setting is, and a discrete toggle (a motion mode, the drift
+   switch, `Reset defaults`) left the debounce a slider drag had armed still running: the write
+   landed twice, once now and once 200 ms later with the same bytes. Both paths now go through
+   `writeS()`, and the immediate one cancels the pending timer first, so a toggle after a drag
+   stores the drag's value once. */
 let saveTimer=null;
 function writeS(){saveTimer=null;try{localStorage.setItem('glass.settings.v1',JSON.stringify(S))}catch(e){}}
-function saveS(){try{localStorage.setItem('glass.settings.v1',JSON.stringify(S))}catch(e){}}
+function saveS(){if(saveTimer)clearTimeout(saveTimer);writeS()}
 function saveSSoon(){if(saveTimer)clearTimeout(saveTimer);saveTimer=setTimeout(writeS,200)}
 function flushS(){if(saveTimer){clearTimeout(saveTimer);writeS()}}
 window.addEventListener('pagehide',flushS);
