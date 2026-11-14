@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 8.0 — three declarations that were written twice are now written once
+
+- `.bubble` carried `border-radius:50%` twice in the same rule, `.blobs` was declared in two blocks a hundred lines apart (position and filter in one, the 4D `transform` in the other) and `prefers-reduced-motion` was handled by two blocks that could not see each other - which is how the two runaway loops in 7.8 went unnoticed - so the duplicate declarations are merged and the reduced-motion rules now live in one block; the computed-style/rect hash of all 150 elements (player `86fd53a3`, sheet `c4990f92`, reduced motion `6696717e`/`9156c74b`) and the rendered 412x892 frame at deviceScaleFactor 2 are byte-identical to 7.9, and the harness reports the same picking, dedupe, row reuse, settings write, back chain and flat/tilted hit-tests.
+
 ### 7.9 — the skip chain's failure budget counts consecutive failures again, not a lifetime total
 
 - `fails` was cleared only by the callback `load()` handed to `attemptPlay()` and only on a load that asked for autoplay, so a track started by the transport left the counter where the last failure put it: two unplayable files, then one that plays, then a single bad one reached the budget of three and announced "Stopped after 3 unplayable tracks." over a playlist with one bad entry; it is now cleared in `au.onplay`, the one place a source has demonstrably started, the dead `onOk` plumbing is gone with it, and the harness shows the same behaviour everywhere else with real media in the skip chain (two bad files and a real WAV: 7.8 read `fails: 2` once the good track played and gave up on the next single failure, 7.9 reads `fails: 0` and walks past it).

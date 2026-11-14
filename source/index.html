@@ -15,7 +15,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--tx);font-family:-apple-system,"SF Pro Display","Segoe UI",Roboto,sans-serif;overflow:hidden;display:grid;place-items:center;user-select:none}
-.blobs{position:fixed;inset:0;overflow:hidden;filter:hue-rotate(calc((var(--h) - 250) * 1deg));transition:filter 1s}
+.blobs{position:fixed;inset:0;overflow:hidden;filter:hue-rotate(calc((var(--h) - 250) * 1deg));transition:filter 1s;transform:translate3d(calc(var(--mx,0) * -30px * var(--park,1)),calc(var(--my,0) * -30px * var(--park,1)),0)}
 .blobs i{position:absolute;border-radius:50%;filter:blur(60px);opacity:.9;animation:float 14s ease-in-out infinite alternate}
 .blobs i:nth-child(1){width:60vmax;height:60vmax;left:-20vmax;top:-15vmax;background:#7b4dff}
 .blobs i:nth-child(2){width:55vmax;height:55vmax;right:-22vmax;top:25vh;background:#ff4d8d;animation-delay:-5s}
@@ -95,7 +95,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .pill{flex:1;padding:13px;border-radius:22px;border:1px solid var(--edge);background:rgba(255,255,255,.18);color:var(--tx);font:600 15px inherit;font-family:inherit;cursor:pointer;transition:transform .45s var(--spring);box-shadow:inset 0 1px 0 var(--shine)}
 .pill:active{transform:scale(.9)}
 
-.bubble{position:fixed;bottom:calc(36px + env(safe-area-inset-bottom,0px));left:50%;margin-left:-36px;width:72px;height:72px;border-radius:50%;display:none;place-items:center;cursor:pointer;color:var(--tx);border-radius:50%}
+.bubble{position:fixed;bottom:calc(36px + env(safe-area-inset-bottom,0px));left:50%;margin-left:-36px;width:72px;height:72px;border-radius:50%;display:none;place-items:center;cursor:pointer;color:var(--tx)}
 .bubble.show{display:grid;animation:popIn .7s var(--spring) both}
 .bubble svg{width:30px;height:30px}
 /* Keyboard focus ring. :focus-visible only matches keyboard/switch navigation, so pointer and
@@ -114,6 +114,14 @@ input[type=range]:focus-visible{outline:2px solid var(--tx);outline-offset:6px;b
      as playing. */
   .blobs i,.eq i{animation:none!important}
   .eq i{height:16px}
+  /* The 4D layer's own motion - the sway, the tilt and the parallax offsets it feeds - is stopped
+     here too, in the same block. It used to live in a second `prefers-reduced-motion` block a
+     hundred lines further down, beside the tilt rules it names: a block that reads as the whole of
+     the reduced-motion story was really only half of it, which is how item 65's two runaway loops
+     went unnoticed. The result is unchanged - every declaration below is `!important` and overrides
+     the same non-important rules it overrode from further down the sheet. */
+  .tilt,.drift{transform:none!important;animation:none!important}
+  .artwrap,.top,.meta,.seek,.row,.lh,.list,.blobs{transform:none!important}
 }
 
 /* ---------- 4D depth ---------- */
@@ -135,11 +143,6 @@ input[type=range]{touch-action:pan-y}
   opacity:var(--glow,0);transition:opacity .35s}
 .artwrap{transform:translate3d(calc(var(--mx,0) * 18px * var(--park,1)),calc(var(--my,0) * 18px * var(--park,1)),0)}
 .meta{transform:translate3d(calc(var(--mx,0) * 9px * var(--park,1)),calc(var(--my,0) * 9px * var(--park,1)),0)}
-.blobs{transform:translate3d(calc(var(--mx,0) * -30px * var(--park,1)),calc(var(--my,0) * -30px * var(--park,1)),0)}
-@media (prefers-reduced-motion:reduce){
-  .tilt,.drift{transform:none!important;animation:none!important}
-  .artwrap,.top,.meta,.seek,.row,.lh,.list,.blobs{transform:none!important}
-}
 
 /* ---------- settings sheet ---------- */
 .sheet{max-height:min(88vh,780px);overflow-y:auto;scrollbar-width:none;

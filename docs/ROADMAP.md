@@ -1000,7 +1000,7 @@ snapshot of both builds, so nothing visible moved.
   `false`) and the flat and tilted `elementFromPoint` hit-tests (all six controls resolving to
   themselves) - and the change is script-only, with no markup, stylesheet, copy or timing touched.
   The page goes from 77,448 to 78,154 bytes.
-- [ ] 67. Three declarations are written twice, and the two reduced-motion blocks sit far apart.
+- [x] 67. Three declarations are written twice, and the two reduced-motion blocks sit far apart.
   **Symptom.** `.bubble` declares `border-radius:50%` twice inside the same rule (once beside
   `width`/`height`, once after `color`), so an edit to the first is silently dead; `.blobs` is
   declared in two separate blocks a hundred lines apart (position/filter in one, the 4D `transform`
@@ -1008,5 +1008,25 @@ snapshot of both builds, so nothing visible moved.
   shortens every animation, one further down that stops the sway - which is exactly why item 65's
   two loops went unnoticed for so long. Nothing renders differently; the cost is that a rule that
   looks authoritative can be overridden by another block with no visible connection to it.
-  **Not done yet.** Merge the duplicate declarations and the two media blocks, with no change to any
-  computed value: verify with the same computed-style/rect hash and rendered frame as item 65.
+  **Fixed in 8.0.** All three are written once now, with no change to any computed value. The second
+  `border-radius:50%` on `.bubble` is gone (same value, so the dead copy had nothing to say); the
+  `.blobs` `transform` moved up into the block that already positions and filters it, so one rule
+  describes the whole layer; and the second `prefers-reduced-motion` block was folded into the first,
+  the 4D `transform`/`animation` resets sitting beside the loop resets they belong with. Every rule
+  in that block is `!important` and overrides the same non-important declarations it overrode from
+  further down the sheet, so the cascade order it relies on is untouched - the sheet goes from 117
+  top-level rules to 115, and from two reduced-motion blocks to one. Verified the way item 65 was:
+  the computed-style/rect hash over all 150 elements is unchanged in both modes (default player
+  `86fd53a3`, sheet `c4990f92`; reduced motion `6696717e`, sheet `9156c74b`, each stable across
+  repeats once the depth inputs are pinned and the audio clock is stopped), and the rendered
+  412x892 frame at deviceScaleFactor 2 is byte-identical to 7.9 (same SHA-256, stable across
+  repeats) in reduced-motion mode, the mode this item touches. The behaviour harness reports what
+  the 7.9 page reports - picking (3 rows, an exact repeat leaves 3, a same-name file of a different
+  size is a 4th), the title after a row jump (`Beta`, then `Gamma`), row reuse (node identity across
+  a jump, `cur` and `aria-current` on the same row), the debounced settings write (`#gl` at 30 lands
+  `"glass":30` in `glass.settings.v1`), the back chain (`true`, `true`, `false`) and the flat and
+  tilted `elementFromPoint` hit-tests (all six controls resolving to themselves) - and the explicit
+  probes read the same in both modes: `.blobs` still `fixed|inset 0|hidden`, `.bubble` still 50% on
+  all four corners, the blob float still `float 14s` and the sway still `sway` in ordinary mode,
+  both `none` with the equaliser held at 16px under reduced motion. Stylesheet-only: no markup,
+  script, copy, layout or timing touched. The page goes from 78,154 to 78,651 bytes.
