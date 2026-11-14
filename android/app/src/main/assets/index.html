@@ -229,7 +229,7 @@ input[type=range]{touch-action:pan-y}
 /* Glass Player - one page, no framework and no build step. Four layers, read top to bottom:
 
    state   `tracks` (the picked files), `idx`, the persisted settings object `S`, and a handful of
-           flags that describe the moment - `switching`, `dragging`, `fails`, `blocked`, `stopped`.
+           flags that describe the moment - `swapAt`, `dragging`, `fails`, `blocked`, `stopped`.
            Everything else on the page is derived from these; nothing here is duplicated elsewhere.
    render  `load()` writes the now-playing block, `renderList()` moves the playlist highlight and
            only rebuilds rows when the set of files actually changed, and `resetSeek()` keeps the
@@ -271,7 +271,7 @@ const tracks=[];
 const objUrls=new Set();
 const mkUrl=b=>{const u=URL.createObjectURL(b);objUrls.add(u);return u};
 let idx=0;
-let switching=false;   // a new source is loading: ignore the pause event it fires
+let swapAt=null;       // when the source on deck was assigned; null = no swap settling
 let pauseAsked=false;  // the pause on its way is the user's, not the one a source swap fires
 let dragging=false;    // the user is scrubbing the seek bar
 let fails=0;           // consecutive tracks that refused to play
@@ -285,15 +285,23 @@ let stopped=false;     // the skip chain gave up and reported; a trailing play()
    the following track out loud. Every load that asks for playback sets this, every deliberate
    pause clears it, and the chain now asks for exactly what the transport last asked for. */
 let wantPlay=false;
-/* One pending clear of `switching`, owned by whichever load armed it last. Every load used to
-   start its own 700 ms timer and never cancel the previous one, so an earlier load's timer fired
-   while a later source was still settling and dropped the guard under it - the queued pause of
-   the newer swap then landed as if it were the user's, painting the card paused over a track
-   that was starting. The handle lives here, and every path that clears the flag cancels the timer
-   with it, so exactly one timer can be live and it always belongs to the most recent load. */
-let switchTimer=0;
-function clearSwitching(){clearTimeout(switchTimer);switchTimer=0;switching=false}
-function armSwitching(){clearTimeout(switchTimer);switchTimer=setTimeout(clearSwitching,700)}
+/* The settling window of a source swap. A swap fires a pause of its own, and for SWITCH_MS after
+   its source was assigned that pause is the swap's, not the listener's.
+   The window used to be a flag cleared by a timer, and a timer does not survive the app being
+   backgrounded: the WebView's timers are frozen with the activity, so the flag was cleared by hand
+   on `visibilitychange` instead - which dropped the guard under a swap that was still settling, and
+   the pause it had already queued was then delivered on resume to an `au.onpause` that saw no swap
+   and painted it as the listener's stop. Measured on 8.0, hide simulated 30 ms after Next and the
+   queued pause dispatched after it: the card lost `playing` and `mediaSession.playbackState` read
+   "paused" over a track that was playing, so the shell abandoned audio focus and the notification
+   said stopped. The same pause with no hide in between was correctly ignored.
+   The window is now a timestamp read at the moment the pause arrives - the way `REPEAT_MS` already
+   decides a repeat tap - so nothing has to survive a freeze and the guard means the same thing on
+   either side of one. `swapAt===null` means no swap is on deck. */
+const SWITCH_MS=700;
+function swapping(){return swapAt!==null&&performance.now()-swapAt<SWITCH_MS}
+function clearSwitching(){swapAt=null}
+function armSwitching(){swapAt=performance.now()}
 let swapToken=0;       // guards the delayed title swap against fast track skipping
 let loadSrc=null;      // the source assigned for the track on deck, so a repeat load is a no-op
 let loadAt=0;          // when that source was assigned (monotonic), for the rapid-repeat window
@@ -459,9 +467,9 @@ function load(i,autoplay,dir){
      reloads, the position drops to 0, the swap animation replays and the pause the reload fires
      leaves the transport showing "play" for a track that is starting. Only the settling window
      last REPEAT_MS is treated as a repeat, so a deliberate reload - next on a one-track list, a
-     replay after `ended` - still swaps the source exactly as before. A timestamp rather than
-     `switching` because that flag is cleared by a fixed 700 ms timer which a previous load can
-     still be holding, and a stale timer must not decide whether this tap is a repeat. */
+     replay after `ended` - still swaps the source exactly as before. A timestamp, the same way
+     the swap window above is measured, so no timer a previous load is holding can decide whether
+     this tap is a repeat. */
   if(n===idx&&tracks[n].src&&loadSrc===tracks[n].src&&performance.now()-loadAt<REPEAT_MS){
     if(autoplay&&au.paused)attemptPlay();
     return;
@@ -475,7 +483,7 @@ function load(i,autoplay,dir){
     setTimeout(()=>{if(token===swapToken)ui()},360);   /* skip if a newer track took over */
   }else ui();
 
-  switching=true;
+  armSwitching();          /* the pause this swap is about to queue belongs to the swap */
   resetSeek();
   setSession(t);
   try{
@@ -488,12 +496,8 @@ function load(i,autoplay,dir){
   }
   if(autoplay){
     attemptPlay();
-    /* the pause event from swapping the source is queued, not immediate. One handle, re-armed by
-       each load, so an earlier load's window cannot close over a later one; a load that does not
-       autoplay has nothing to guard against and leaves no timer behind. */
-    armSwitching();
   }else{
-    clearSwitching();
+    clearSwitching();   /* nothing is starting, so there is no swap pause to guard against */
   }
 }
 
@@ -532,7 +536,7 @@ au.onpause=()=>{
      was never told to drop audio focus, and nothing brought the transport back until the next
      play/pause. A pause the page asked for is now honoured whenever it lands; only an unsolicited
      one inside the window is ignored. */
-  if(switching&&!pauseAsked)return;
+  if(swapping()&&!pauseAsked)return;
   pauseAsked=false;
   wantPlay=false;              /* the listener stopped it (or the shell did): nothing should restart it */
   setShellPlaying(false);
@@ -625,7 +629,7 @@ sk.oninput=e=>{
 ['pointerdown','touchstart'].forEach(ev=>sk.addEventListener(ev,()=>{dragging=true},{passive:true}));
 ['pointerup','pointercancel','touchend','touchcancel','blur'].forEach(ev=>sk.addEventListener(ev,()=>{dragging=false},{passive:true}));
 ['pointerup','pointercancel','touchend','touchcancel'].forEach(ev=>window.addEventListener(ev,()=>{dragging=false},{passive:true}));
-document.addEventListener('visibilitychange',()=>{dragging=false;if(document.hidden)clearSwitching();});
+document.addEventListener('visibilitychange',()=>{dragging=false});
 
 /* The three blurred blobs behind the glass are the page backdrop. Their 14s float loop kept
    compositing while the player was collapsed to the bubble and while the page was hidden, where

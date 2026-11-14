@@ -1030,3 +1030,54 @@ snapshot of both builds, so nothing visible moved.
   all four corners, the blob float still `float 14s` and the sway still `sway` in ordinary mode,
   both `none` with the equaliser held at 16px under reduced motion. Stylesheet-only: no markup,
   script, copy, layout or timing touched. The page goes from 78,154 to 78,651 bytes.
+
+## Correctness after the sprint backlog
+
+- [x] 68. The guard that tells a source swap's own pause apart from the listener's is thrown away
+  when the page goes to the background, so a swap that was still settling when the app was
+  backgrounded is painted as a stop on resume.
+  **Symptom.** Press Next and let the app go to the background inside the 700 ms a new source takes
+  to settle. The guard was a flag cleared by a timer, and the WebView's timers are frozen with the
+  activity, so `visibilitychange` cleared the flag by hand on the way out instead. The pause the
+  swap had already queued is then delivered on resume to an `au.onpause` that no longer sees a
+  swap, and is taken for the listener's pause: the card paints the play icon over a track that is
+  playing, `GP.setPlaying(false)` makes the shell abandon audio focus - so the next app that asks
+  for it is not ducked - and the media notification says paused. Measured on 8.0 with the hide
+  simulated 30 ms after Next and the queued pause dispatched after it: `playing` read `false` and
+  `mediaSession.playbackState` read `paused` over a track that had started. The same pause with no
+  hide in between was correctly ignored, which is what pinned the cause to the hide rather than to
+  the window itself.
+  **Fixed in 8.1.** The window is a timestamp read at the moment the pause arrives -
+  `swapping()` compares `performance.now()` against the moment the source on deck was assigned, the
+  way `REPEAT_MS` already decides a repeat tap - so nothing has to survive a freeze and the guard
+  means the same thing on either side of one. `clearSwitching()` is now `swapAt=null` and the
+  `visibilitychange` handler only drops `dragging`; no timer is left behind by a load at all, so
+  the one pending-timer hazard the old comment describes is gone with it. Verified: the same probe
+  reads `playing: true` and `playbackState: "playing"` after the fix, the control cases are
+  unchanged (a late swap pause with no hide is still ignored, a pause the page asked for inside the
+  window is still honoured, a pause after the window is still the listener's), the behaviour
+  harness reports exactly what 8.0 reports - picking (2 rows, an exact repeat leaves 2, a same-name
+  file of a different size is a 3rd), the title after a row jump, row reuse (node identity), the
+  debounced settings write (`#gl` at 33 lands `glass:33`), the back chain (`true`, `true`, `false`)
+  and the flat and tilted `elementFromPoint` hit-tests (all six controls resolving to themselves) -
+  and the markup and stylesheet are byte-identical to 8.0, with the computed-style/rect hash of all
+  118 elements in the player state unchanged (`8fdb8105` before and after, stable across repeats).
+  The page goes from 78,651 to 79,039 bytes.
+- [ ] 69. `prefers-reduced-motion` is read once at startup, so a preference changed while the app is
+  open never reaches the 4D engine.
+  **Symptom.** `REDUCED` is a constant captured from `matchMedia` when the script first runs, and
+  the stylesheet's own media block is re-evaluated live by the browser - so the two halves of
+  reduced motion disagree the moment the setting changes. Turn "Remove animations" off while the
+  player is open and the card stays flat and dead to the gyroscope, the finger and the pointer
+  until the app is restarted, because every tilt handler still asks `motionOff()` and still gets
+  the stale `true`; turn it on and the spring keeps running frames for a tilt that the stylesheet
+  is now overriding. Measured on 8.0 with `matchMedia` stubbed and the preference flipped after
+  load: a `pointermove` that moves `--mx` on a fresh load leaves it at `0` on a page that has seen
+  the flip.
+- [ ] 70. The settings writer exists twice, and only one copy clears the pending debounce.
+  **Symptom.** `writeS()` and `saveS()` have the same body - `JSON.stringify(S)` into
+  `glass.settings.v1` - and differ only in that `writeS()` also clears `saveTimer`. A change to the
+  key or the serialisation has to be made in both or the debounced and the immediate path disagree
+  about what a saved setting is, and a discrete toggle (`Reset defaults`, a motion mode, the drift
+  switch) leaves the debounce a slider drag armed, so the write lands twice. `flushS()` already
+  does exactly what `saveS()` should do.

@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 8.1 — a source swap that was still settling when the app went to the background is no longer painted as a stop on resume
+
+- the 700 ms swap guard was a flag cleared by a timer that the WebView freezes with the activity, so `visibilitychange` cleared it by hand and the swap's own queued pause was then read as the listener's on resume - dropping `playing`, abandoning audio focus and telling the media notification the player had stopped over a track that was playing; it is now a timestamp read when the pause arrives, the hide no longer touches it, and the markup, stylesheet, computed-style hash (`8fdb8105`), behaviour harness and flat/tilted hit-tests are unchanged from 8.0.
+
 ### 8.0 — three declarations that were written twice are now written once
 
 - `.bubble` carried `border-radius:50%` twice in the same rule, `.blobs` was declared in two blocks a hundred lines apart (position and filter in one, the 4D `transform` in the other) and `prefers-reduced-motion` was handled by two blocks that could not see each other - which is how the two runaway loops in 7.8 went unnoticed - so the duplicate declarations are merged and the reduced-motion rules now live in one block; the computed-style/rect hash of all 150 elements (player `86fd53a3`, sheet `c4990f92`, reduced motion `6696717e`/`9156c74b`) and the rendered 412x892 frame at deviceScaleFactor 2 are byte-identical to 7.9, and the harness reports the same picking, dedupe, row reuse, settings write, back chain and flat/tilted hit-tests.
