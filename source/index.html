@@ -864,8 +864,28 @@ function releaseUrls(){
 window.addEventListener('pagehide',e=>{if(!e.persisted){clearSession();releaseUrls()}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)flushS()});
 
-const REDUCED=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+/* The reduced-motion preference is a live query, not a value captured when the script first ran.
+   The stylesheet's own `prefers-reduced-motion` block is re-evaluated by the browser the moment
+   the setting changes, so a constant here made the two halves of reduced motion disagree: turning
+   "Remove animations" off while the player was open left the card flat and deaf to the gyroscope,
+   the finger and the pointer until the app was restarted, because every tilt handler still asked
+   `motionOff()` and still got the stale `true`; turning it on left the spring running frames for a
+   tilt the stylesheet was now overriding. The query is kept as a live MediaQueryList and the
+   cached answer is updated on its `change` event, so the engine and the stylesheet always agree.
+   The handler also settles the card the way `applyS()` does when a mode is picked, so a preference
+   that turns motion off while a tilt is in flight leaves the same flat card the stylesheet paints
+   rather than a tilt frozen mid-spring. */
+const RMQ=window.matchMedia?window.matchMedia('(prefers-reduced-motion: reduce)'):null;
+let REDUCED=!!(RMQ&&RMQ.matches);
 const motionOff=()=>REDUCED||S.motion==='off';
+if(RMQ){
+  const onRM=()=>{
+    REDUCED=!!RMQ.matches;
+    if(motionOff()){tg.x=0;tg.y=0;kick()}
+  };
+  if(RMQ.addEventListener)RMQ.addEventListener('change',onRM);
+  else if(RMQ.addListener)RMQ.addListener(onRM);   /* older WebViews */
+}
 
 const driftBtn=$('driftBtn');
 /* The motion segment's three buttons are never replaced, and the mode they show only changes when

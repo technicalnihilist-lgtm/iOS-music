@@ -1063,7 +1063,7 @@ snapshot of both builds, so nothing visible moved.
   and the markup and stylesheet are byte-identical to 8.0, with the computed-style/rect hash of all
   118 elements in the player state unchanged (`8fdb8105` before and after, stable across repeats).
   The page goes from 78,651 to 79,039 bytes.
-- [ ] 69. `prefers-reduced-motion` is read once at startup, so a preference changed while the app is
+- [x] 69. `prefers-reduced-motion` is read once at startup, so a preference changed while the app is
   open never reaches the 4D engine.
   **Symptom.** `REDUCED` is a constant captured from `matchMedia` when the script first runs, and
   the stylesheet's own media block is re-evaluated live by the browser - so the two halves of
@@ -1074,6 +1074,22 @@ snapshot of both builds, so nothing visible moved.
   is now overriding. Measured on 8.0 with `matchMedia` stubbed and the preference flipped after
   load: a `pointermove` that moves `--mx` on a fresh load leaves it at `0` on a page that has seen
   the flip.
+  **Fixed in 8.2.** The query is kept as a live `MediaQueryList` and the cached `REDUCED` is
+  updated on its `change` event, with an `addListener` fallback for the older WebViews the API 24
+  floor still admits, so `motionOff()` answers with what the stylesheet is already painting. The
+  handler also settles the card the way `applyS()` does when a mode is picked, so a preference
+  that turns motion off mid-tilt lands the same flat card the media block paints instead of a
+  tilt frozen mid-spring. Verified: the same probe reads `--mx` `-0.5547` after a flip to
+  no-preference (it read `0.0000` on 8.1) and returns to `-0.0008` - settled - when the
+  preference is turned back on, while a `pointermove` under a preference that was on at load is
+  still a no-op; the markup and stylesheet are byte-identical to 8.1, a side-by-side
+  computed-style/rect snapshot of both builds in the same process shows 0 differences across all
+  127-141 elements in five states (empty, picked, switched, sheet, tilted), and the behaviour
+  harness reports exactly what 8.1 reports - picking (2 rows, an exact repeat leaves 2, a
+  same-name file of a different size is a 3rd), the title after a row jump, row reuse (node
+  identity), the debounced settings write (`#gl` at 33 lands `glass:33`), the back chain
+  (`true`, `true`, `false`) and the flat and tilted `elementFromPoint` hit-tests (all six
+  controls resolving to themselves). The page goes from 79,046 to 80,333 bytes.
 - [ ] 70. The settings writer exists twice, and only one copy clears the pending debounce.
   **Symptom.** `writeS()` and `saveS()` have the same body - `JSON.stringify(S)` into
   `glass.settings.v1` - and differ only in that `writeS()` also clears `saveTimer`. A change to the
