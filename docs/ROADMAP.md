@@ -1090,10 +1090,25 @@ snapshot of both builds, so nothing visible moved.
   identity), the debounced settings write (`#gl` at 33 lands `glass:33`), the back chain
   (`true`, `true`, `false`) and the flat and tilted `elementFromPoint` hit-tests (all six
   controls resolving to themselves). The page goes from 79,046 to 80,333 bytes.
-- [ ] 70. The settings writer exists twice, and only one copy clears the pending debounce.
+- [x] 70. The settings writer exists twice, and only one copy clears the pending debounce.
   **Symptom.** `writeS()` and `saveS()` have the same body - `JSON.stringify(S)` into
   `glass.settings.v1` - and differ only in that `writeS()` also clears `saveTimer`. A change to the
   key or the serialisation has to be made in both or the debounced and the immediate path disagree
   about what a saved setting is, and a discrete toggle (`Reset defaults`, a motion mode, the drift
   switch) leaves the debounce a slider drag armed, so the write lands twice. `flushS()` already
   does exactly what `saveS()` should do.
+  **Fixed in 8.3.** `writeS()` is the only place that names the key and serialises `S`; `saveS()` is
+  now `if(saveTimer)clearTimeout(saveTimer);writeS()` - the immediate path cancels the pending
+  debounce and then writes through the same function, so a toggle that follows a drag stores the
+  drag's value once instead of once now and once 200 ms later with the same bytes. `saveSSoon()`
+  and `flushS()` are unchanged. Verified: a probe that counts writes to `glass.settings.v1` reads
+  1 write after a `#gl` input followed immediately by a drift toggle, where 8.2 read 2, and the
+  stored value is the drag's `glass:33` in both; a drag on its own still coalesces (0 writes at
+  60 ms, 1 at 200 ms, `glass:33`), a toggle with nothing pending still writes at once (1), and a
+  `pagehide` flush still lands the pending value (1, `glass:40`). The markup and stylesheet are
+  byte-identical to 8.2 (the 19,501 bytes before `<script>` compare equal), and the behaviour
+  harness reports exactly what 8.2 reports - picking (2 rows, an exact repeat leaves 2, a
+  same-name file of a different size is a 3rd), the title after a row jump, row reuse (node
+  identity), the debounced settings write (`#gl` at 33 lands `glass:33`), the back chain
+  (`true`, `true`, `false`) and the flat and tilted `elementFromPoint` hit-tests (all six
+  controls resolving to themselves). The page goes from 80,333 to 80,917 bytes.
