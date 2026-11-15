@@ -1112,3 +1112,42 @@ snapshot of both builds, so nothing visible moved.
   identity), the debounced settings write (`#gl` at 33 lands `glass:33`), the back chain
   (`true`, `true`, `false`) and the flat and tilted `elementFromPoint` hit-tests (all six
   controls resolving to themselves). The page goes from 80,333 to 80,917 bytes.
+
+## Backlog added after the 70 items above were cleared (found 2026-11-15)
+
+- [x] 71. A playlist whose files the platform cannot decode never stops walking it.
+  **Symptom.** Pick three files the WebView cannot decode - a container it does not support, a
+  truncated or protected file - into an empty player. Every failure walked the skip chain to the
+  next source, and `au.onplay` cleared the budget on the way, because `play` fires as soon as
+  `play()` is called: before a byte is loaded, and for a source that is about to fail as well. So
+  `fails` could never reach `MAX_SKIP` and the chain never ended. Measured on 8.3: 19 errors in the
+  first 1.5 s and 48 by three seconds, still climbing, one source swap per failure, with the CPU
+  busy for as long as the app stayed open. Because each load cancelled the previous load's delayed
+  paint, the card still read "No songs yet" with the empty-state row in the playlist over three
+  files that were in `tracks`, and the transport said it was playing - the card's `playing` class
+  and `aria-pressed="true"` - over silence.
+  **Fixed in 8.4.** The budget is cleared on `playing` instead of `play`: `playing` is the element
+  saying it has data and is actually advancing, which a source that only manages a `play` event
+  before erroring never reaches. `au.onplay` keeps painting the transport, so the icon still flips
+  on the tap rather than on the first decoded frame, and `au.onplaying` now owns the one line that
+  clears the chain. Verified: the same three undecodable files produce 3 errors and then nothing -
+  the count is identical at 1.5 s and at 3 s, where 8.3 read 19 and then 48 - and the run settles
+  with `data-blocked="1"`, `playing` off, `aria-pressed="false"`, the status region reading
+  "Stopped after 3 unplayable tracks. Can't play this file.", the card header and artist line
+  naming the track it gave up on, and all three rows in the playlist; picking a good file
+  afterwards still plays, clears `data-blocked` and the status message, and the markup and
+  stylesheet are byte-identical to 8.3 (the 19,506 bytes before `<script>` compare equal). The
+  behaviour harness reports the same picking (2 rows, an exact repeat leaves 2, a same-name file of
+  a different size is a 3rd), the title after a row jump, row reuse (node identity), the debounced
+  settings write (`#gl` at 33 lands `glass:33`), the back chain (`true`, `true`, `false`) and the
+  flat and tilted `elementFromPoint` hit-tests (all six controls resolving to themselves), plus
+  play, pause and next on a playlist that does play. The page goes from 80,917 to 81,848 bytes.
+- [ ] 72. `Reset defaults` leaves the Colour shift slider, and the hue it drives, where the drag
+  left them.
+  **Symptom.** Drag Colour shift to 100 degrees in the options sheet and press `Reset defaults`.
+  The other six sliders snap back to their defaults and `glass.settings.v1` is rewritten with them,
+  but the Colour shift slider keeps its value and its readout, and `--h` keeps the page hue - the
+  blob field, the album art and the glass tint - shifted. The control has a well-defined default:
+  `paintTrack()` puts it back to the current track's own hue on every track change, so the sheet is
+  the only place it can be left off it. `resetBtn` resets `S` and then re-syncs `SL`, the seven
+  sliders it owns, and the hue is not one of them.

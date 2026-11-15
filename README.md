@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 8.4 — a playlist the platform cannot decode now stops walking it, instead of looping forever
+
+- `au.onplay` cleared the skip chain's failure budget, but `play` fires as soon as `play()` is called — before a byte is loaded, and for a source that is about to fail as well — so `fails` could never reach `MAX_SKIP` and an all-undecodable playlist swapped sources forever (19 errors in 1.5 s, 48 by three seconds on 8.3, CPU busy for as long as the app was open, the card still reading "No songs yet" over three files that were in `tracks`); the budget is now cleared on `playing`, which only a source with data actually advancing reaches, so the same three files stop after 3 errors and report "Stopped after 3 unplayable tracks. Can't play this file." with the failing track named, the markup and stylesheet are byte-identical to 8.3, and the harness reports the same picking, dedupe, row reuse, settings write, back chain and flat/tilted hit-tests while the unplayable-playlist check goes from "never settles" to "settles at 3 errors".
+
 ### 8.3 — the settings writer is now one function, so a toggle after a slider drag no longer writes twice
 
 - `saveS()` carried its own copy of `writeS()`'s serialise-and-store body and never cleared `saveTimer`, so a discrete toggle (a motion mode, the drift switch, `Reset defaults`) made while a slider drag's 200 ms debounce was still armed wrote `glass.settings.v1` twice - once immediately and once with the same bytes on the timer - and any change to the key or the serialisation had to be made in both copies; `saveS()` now cancels the pending timer and writes through `writeS()`, the one writer, the markup and stylesheet are byte-identical to 8.2, and the harness reports the same picking, dedupe, row reuse, back chain and flat/tilted hit-tests while a write counter reads 1 write after a drag-then-toggle where 8.2 read 2.

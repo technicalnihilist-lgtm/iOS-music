@@ -513,20 +513,30 @@ prevBtn.onclick=()=>{
 };
 
 au.onplay=()=>{
-  /* A source has demonstrably started, so the run of failures is over. This is the only place
-     the budget can be cleared honestly: it used to be reset by a callback `load()` handed to
-     `attemptPlay()`, and only when that load had asked for autoplay - a press of `#pp` or a tap
-     on the current row started playback without clearing anything, so `fails` described a
-     lifetime total instead of a run of consecutive failures. Two unplayable files, then one that
-     plays, then a single bad one reached the budget of three and announced "Stopped after 3
-     unplayable tracks." over a playlist with one bad entry. Cleared on the media event itself,
-     every successful start - whichever path asked for it - resets the chain. */
-  fails=0;
+  /* This paints the transport, and only the transport. The failure budget used to be cleared
+     here too, on the reasoning that a `play` event means the source started - but `play` only
+     says `play()` was called: the element fires it as soon as the paused state drops, before it
+     has loaded a byte, and it fires one for a source it is about to fail on as well. The budget
+     was therefore reset on every attempt of every bad file, so `fails` could never reach
+     `MAX_SKIP` on a playlist made entirely of files the platform cannot decode: each error
+     walked the chain to the next source, that source fired `play`, the budget went back to
+     zero, and the error walked on again - a source swap per failure, forever. Measured on 8.3
+     with three undecodable files picked into an empty player: the element produced 15
+     `play`/`error` pairs in the first 1.5 s and 188 errors in four seconds, the CPU stayed busy
+     for as long as the app was open, and because every load cancelled the previous load's
+     delayed paint the card still read "No songs yet" with the empty-state row in the playlist
+     over three files that were in `tracks`. The budget is cleared on `playing` instead (below),
+     which the element fires only once it has data and is actually advancing. */
   setPlaying(true);
   restart(ppBtn,'bump');
   setSessionPlaying(true);
   setShellPlaying(true);
 };
+/* Playback has actually begun - the source decoded and is running - so the run of failures is
+   over. This is the honest place to clear the budget: a press of `#pp` or a tap on the current
+   row resets it just like an autoplay load does (the bug the old comment here described), and a
+   source that only managed to fire `play` before failing does not. */
+au.onplaying=()=>{fails=0};
 au.onpause=()=>{
   /* A source swap fires a pause of its own, and that one must not be painted as the user's: it
      would drop the `playing` class the new track is about to need. But the whole 700 ms switching
