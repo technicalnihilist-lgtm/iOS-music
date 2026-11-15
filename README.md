@@ -76,6 +76,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 8.5 — `Reset defaults` now puts the Colour shift slider and the hue it drives back on the current track, instead of leaving a dragged hue applied until the next track change
+
+- The colour-shift slider is the one control in the sheet that is not part of `S` — the track owns it — so `resetBtn` re-syncing the seven sliders in `SL` skipped it and a hue dragged off the track's own survived the reset (the slider, its readout and `--h` — the blob field and the glass tint — all stayed shifted, and on an empty player it stayed on the dragged hue instead of the 250 the page starts with); the four writes are now one `setHue()` that the drag, `paintTrack()` and the reset all go through, so the reset restores the hue a track change would, the markup and stylesheet are byte-identical to 8.4, and the harness reports the same picking, dedupe, row reuse, settings write, back chain and flat/tilted hit-tests while the reset check goes from "stays at 100" to "back to 138" (and "back to 250" with no track).
+
 ### 8.4 — a playlist the platform cannot decode now stops walking it, instead of looping forever
 
 - `au.onplay` cleared the skip chain's failure budget, but `play` fires as soon as `play()` is called — before a byte is loaded, and for a source that is about to fail as well — so `fails` could never reach `MAX_SKIP` and an all-undecodable playlist swapped sources forever (19 errors in 1.5 s, 48 by three seconds on 8.3, CPU busy for as long as the app was open, the card still reading "No songs yet" over three files that were in `tracks`); the budget is now cleared on `playing`, which only a source with data actually advancing reaches, so the same three files stop after 3 errors and report "Stopped after 3 unplayable tracks. Can't play this file." with the failing track named, the markup and stylesheet are byte-identical to 8.3, and the harness reports the same picking, dedupe, row reuse, settings write, back chain and flat/tilted hit-tests while the unplayable-playlist check goes from "never settles" to "settles at 3 errors".

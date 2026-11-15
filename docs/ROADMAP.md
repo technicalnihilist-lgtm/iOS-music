@@ -1142,7 +1142,7 @@ snapshot of both builds, so nothing visible moved.
   settings write (`#gl` at 33 lands `glass:33`), the back chain (`true`, `true`, `false`) and the
   flat and tilted `elementFromPoint` hit-tests (all six controls resolving to themselves), plus
   play, pause and next on a playlist that does play. The page goes from 80,917 to 81,848 bytes.
-- [ ] 72. `Reset defaults` leaves the Colour shift slider, and the hue it drives, where the drag
+- [x] 72. `Reset defaults` leaves the Colour shift slider, and the hue it drives, where the drag
   left them.
   **Symptom.** Drag Colour shift to 100 degrees in the options sheet and press `Reset defaults`.
   The other six sliders snap back to their defaults and `glass.settings.v1` is rewritten with them,
@@ -1151,3 +1151,19 @@ snapshot of both builds, so nothing visible moved.
   `paintTrack()` puts it back to the current track's own hue on every track change, so the sheet is
   the only place it can be left off it. `resetBtn` resets `S` and then re-syncs `SL`, the seven
   sliders it owns, and the hue is not one of them.
+  **Fixed in 8.5.** The four writes that move the hue - `--h` on `:root`, the slider's value, its
+  readout and its `--p` fill - are one function, `setHue()`, which the drag, `paintTrack()` and
+  `resetBtn` all go through, so the reset restores the same hue a track change would. The default
+  is the current track's own hue, or, with nothing on the card, the value the control and `:root`
+  start with, read from `EL.hu.defaultValue` rather than repeated as a literal. `--ah` stays where
+  it was: the album art is painted from the track in `paintTrack()` and a drag never moved it.
+  Verified: with Beta playing (hue 138) a drag of Colour shift to 100 then `Reset defaults` leaves
+  `--h`, the slider, the readout and `--p` at 100 on 8.4 and at 138 on 8.5, and on an empty player
+  the same drag resets to 250 instead of staying at 100; the stored blob is the defaults in both
+  cases and a reset armed behind a slider drag still writes once, not twice. The markup and
+  stylesheet are byte-identical to 8.4 (the 19,506 bytes before `<script>` compare equal) and the
+  behaviour harness reports the same picking (2 rows, an exact repeat leaves 2, a same-name file of
+  a different size is a 3rd), the title after a row jump, row reuse (node identity), the debounced
+  settings write, the back chain (`true`, `true`, `false`), the flat and tilted `elementFromPoint`
+  hit-tests (all six controls resolving to themselves) and play/pause on a playlist that plays. The
+  page goes from 81,848 to 82,707 bytes.

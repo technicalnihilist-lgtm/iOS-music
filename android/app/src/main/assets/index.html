@@ -999,15 +999,24 @@ Object.keys(SL).forEach(id=>{
 
 /* colour shift stays tied to the current track */
 /* The colour-shift slider is `EL.hu`, the same handle `paintTrack()` writes; it used to keep a
-   second `$('hu')` of its own. */
-if(EL.hu){
-  EL.hu.oninput=()=>{
-    EL.hu.style.setProperty('--p',(EL.hu.value/360*100)+'%');
-    root.setProperty('--h',EL.hu.value);
-    EL.huV.textContent=EL.hu.value+'°';
-    setVT(EL.hu,vtOf('hu',EL.hu.value));
-  };
+   second `$('hu')` of its own.
+   The slider and the hue it drives are the one control in the sheet that is not part of `S`: the
+   track owns them, `paintTrack()` puts them back to the track's own hue on every track change, and
+   dragging moves them without touching the stored settings. `Reset defaults` reset `S`, re-synced
+   the seven sliders in `SL` and stopped there - the hue is not one of them - so a hue dragged off
+   the track's own survived the reset: the slider kept the dragged value and readout and `--h` kept
+   the page hue (the blob field and the glass tint) shifted, until the next track change put it
+   back. The four writes are now one function that both the drag and the reset go through, so a
+   reset restores the hue a track change would, and the stylesheet default when nothing is playing. */
+function setHue(h){
+  root.setProperty('--h',h);
+  EL.hu.value=h;EL.huV.textContent=h+'°';setVT(EL.hu,vtOf('hu',h));
+  EL.hu.style.setProperty('--p',(h/360*100)+'%');
 }
+/* The hue with no track on the card is whatever the markup and `:root` start with, read from the
+   control rather than repeated as a literal that could drift from it. */
+const HUE0=+EL.hu.defaultValue;
+if(EL.hu)EL.hu.oninput=()=>setHue(+EL.hu.value);
 
 if(segEl)segEl.onclick=e=>{
   const b=e.target.closest('[data-m]');if(!b)return;
@@ -1017,6 +1026,7 @@ if(driftBtn)driftBtn.onclick=()=>{S.drift=S.drift?0:1;applyS();saveS()};
 if(resetBtn)resetBtn.onclick=()=>{
   S=Object.assign({},DEF);
   Object.keys(SL).forEach(syncSlider);
+  setHue(tracks[idx]?tracks[idx].h:HUE0);
   applyS();saveS();
 };
 
@@ -1224,9 +1234,7 @@ let listCount=-1;
 function paintTrack(t){
   EL.title.textContent=t.t;EL.artist.textContent=t.a;
   EL.art.style.setProperty('--ah',t.h);
-  document.documentElement.style.setProperty('--h',t.h);
-  EL.hu.value=t.h;EL.huV.textContent=t.h+'°';setVT(EL.hu,vtOf('hu',t.h));
-  EL.hu.style.setProperty('--p',(t.h/360*100)+'%');
+  setHue(t.h);
   renderList();
 }
 function renderList(rebuild){
