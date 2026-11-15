@@ -1167,3 +1167,50 @@ snapshot of both builds, so nothing visible moved.
   settings write, the back chain (`true`, `true`, `false`), the flat and tilted `elementFromPoint`
   hit-tests (all six controls resolving to themselves) and play/pause on a playlist that plays. The
   page goes from 81,848 to 82,707 bytes.
+
+- [x] 73. `prefers-reduced-motion` shortens every animation and leaves every transition at full
+  length, so the one mode whose purpose is to remove motion still has plenty of it.
+  **Symptom.** Turn "Remove animations" on and press play: the album art still springs from 0.84
+  to 1 over 0.7 s, every chip, playlist row and pill still squishes over 0.45 s on a press, the
+  drift switch's knob still slides over 0.35 s, the colour-shift slider's thumb still swells over
+  0.3 s, and the whole backdrop still sweeps to the new hue over 1 s on a track change. Measured
+  in headless Chromium with `--force-prefers-reduced-motion` on 8.5, the computed
+  `transition-duration` of `.art`, `.it`, `.chip`, `.ctl.main`, `.pill`, `.seg button`, `.sw`,
+  `.sw::after`, `.blobs`, `#seek` and `#hu` was identical to the page without the preference:
+  the block's blanket rule names `animation-duration` only, and the block's own comment calls
+  itself the whole of the reduced-motion story.
+  **Fixed in 8.6.** The block now shortens `transition-duration` the same way it shortens
+  `animation-duration`, on `*`, `*::before` and `*::after` - a pseudo-element is not matched by
+  `*`, which is why the switch knob needed naming - plus the slider thumb, which is a vendor
+  pseudo-element (`::-webkit-slider-thumb`) and so is not covered by `::before`/`::after` either.
+  0.01 s rather than `none`: a transition still lands on its end state and still fires
+  `transitionend`, so no control is left half-way, and nothing in the page listens for it. Verified
+  by comparing the computed `transition-duration`, `transition-property`, `animation-duration`,
+  `animation-name` and `transform` of twenty selectors on 8.5 and 8.6, with and without the
+  preference: without it the two pages agree on every one of those properties (the only deltas are
+  the sampled `transform` matrices of the idle sway and the spring, mid-frame); with it, all
+  eleven transitions that had a duration go from 0.7/0.45/0.4/0.35/0.3/1 s to 0.01 s and nothing
+  else moves - the animations, the transforms and the layout are byte for byte what 8.5 had. The
+  behaviour harness reports the same picking (2 rows, an exact repeat leaves 2, a same-name file of
+  a different size is a 3rd), the title after a row jump, row reuse (node identity), the debounced
+  settings write, the back chain (`true`, `true`, `false`) and the flat and tilted
+  `elementFromPoint` hit-tests (all six controls resolving to themselves), plus play, pause and
+  next on a playlist that does play. Only the stylesheet changed: the `<script>` block is byte-
+  identical to 8.5's (63,182 bytes). The page goes from 82,707 to 83,896 bytes.
+- [ ] 74. `data-blocked` carries three states for a boolean: absent, `0` and `1`.
+  **Symptom.** `setBlocked()` writes the attribute only when the value changes and `blocked`
+  starts `false`, so a page that has never refused a play has no `data-blocked` at all while one
+  that refused and then recovered has `data-blocked="0"`. Measured on 8.5 in headless Chromium:
+  `getAttribute('data-blocked')` is `null` on a fresh page and `"0"` after a refused play that
+  then started. Nothing in the page reads the attribute - no rule matches it - so every reader,
+  a future stylesheet rule or the behaviour harness, has to spell "absent or `0`" by hand, and a
+  selector written as `[data-blocked="0"]` silently misses the fresh page.
+- [ ] 75. The seek bar is dead while the clock runs whenever the media reports no usable duration.
+  **Symptom.** `ontimeupdate` computes the position as `0` unless `duration` is finite and
+  positive, but writes `#cur` and the slider's `aria-valuetext` from `currentTime` regardless, so
+  a source whose duration reads `Infinity` (some VBR MP3s and streams do until their header is
+  reparsed) shows a bar pinned at the far left under a clock that is counting. Measured on 8.5 in
+  headless Chromium with `duration = Infinity` and `currentTime = 95`: `#dur` correctly reads
+  `--:--`, but `#cur` reads `1:35`, the slider's `value` is `0`, its `--p` fill is `0%` and its
+  `aria-valuetext` reads `1:35` - the bar never moves, and the control announces a position it
+  does not hold.
