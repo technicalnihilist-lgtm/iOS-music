@@ -328,6 +328,15 @@ const REPEAT_MS=400;   // a second tap inside this window belongs to the same bu
    shows "play" (the thing that will actually work) instead of "pause". No styles, geometry,
    copy or animation change. */
 let blocked=false;
+/* `setBlocked()` writes the attribute only when the value changes, so a page that had never
+   refused a play carried no `data-blocked` at all while one that refused and then recovered
+   carried `"0"`: three spellings - absent, `0` and `1` - for a boolean with two states. Nothing
+   in the page reads it, so the cost fell on every reader outside it: a future stylesheet rule, or
+   the behaviour harness, had to spell "absent or `0`" by hand, and a `[data-blocked="0"]`
+   selector silently missed the fresh page. The attribute is now written once here, before
+   anything can refuse a play, so the only two values it ever holds are `"0"` and `"1"`. The
+   attribute is not rendered, so nothing on screen moves. */
+app.dataset.blocked='0';
 const live=$('live');
 let liveTimer=null;
 function announce(msg){

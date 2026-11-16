@@ -1197,7 +1197,7 @@ snapshot of both builds, so nothing visible moved.
   `elementFromPoint` hit-tests (all six controls resolving to themselves), plus play, pause and
   next on a playlist that does play. Only the stylesheet changed: the `<script>` block is byte-
   identical to 8.5's (63,182 bytes). The page goes from 82,707 to 83,896 bytes.
-- [ ] 74. `data-blocked` carries three states for a boolean: absent, `0` and `1`.
+- [x] 74. `data-blocked` carries three states for a boolean: absent, `0` and `1`.
   **Symptom.** `setBlocked()` writes the attribute only when the value changes and `blocked`
   starts `false`, so a page that has never refused a play has no `data-blocked` at all while one
   that refused and then recovered has `data-blocked="0"`. Measured on 8.5 in headless Chromium:
@@ -1205,6 +1205,22 @@ snapshot of both builds, so nothing visible moved.
   then started. Nothing in the page reads the attribute - no rule matches it - so every reader,
   a future stylesheet rule or the behaviour harness, has to spell "absent or `0`" by hand, and a
   selector written as `[data-blocked="0"]` silently misses the fresh page.
+  **Fixed in 8.7.** The attribute is written once at startup, before anything can refuse a play,
+  so the only two values it ever holds are `"0"` and `"1"` and a `[data-blocked="0"]` selector
+  matches a page that has never been blocked. `setBlocked()` is unchanged: it still writes only
+  when the value changes, which is now a change between two present states rather than between
+  absent and present. Nothing reads the attribute in the page and no rule matches it, so the
+  markup and stylesheet are byte-identical to 8.6 (the 20,695 bytes before `<script>` compare
+  equal). Verified on 8.6 and 8.7 side by side with the same harness: on 8.6
+  `getAttribute('data-blocked')` is `null` on a fresh page and `app.matches('[data-blocked="0"]')`
+  is false, on 8.7 both read `"0"`; a stubbed `NotAllowedError` from `play()` still takes it to
+  `"1"` with the "Playback blocked" status message, and a play that then succeeds takes it back to
+  `"0"`, on both builds. Everything else is unchanged on both: the behaviour harness reports the
+  same picking (2 rows, an exact repeat leaves 2, a same-name file of a different size is a 3rd),
+  the title after a row jump, row reuse (node identity), the debounced settings write, the back
+  chain (`true`, `true`, `false`), play/pause toggling a playlist that plays, and the flat and
+  tilted `elementFromPoint` hit-tests (all six controls resolving to themselves). The page goes
+  from 83,896 to 84,639 bytes.
 - [ ] 75. The seek bar is dead while the clock runs whenever the media reports no usable duration.
   **Symptom.** `ontimeupdate` computes the position as `0` unless `duration` is finite and
   positive, but writes `#cur` and the slider's `aria-valuetext` from `currentTime` regardless, so
