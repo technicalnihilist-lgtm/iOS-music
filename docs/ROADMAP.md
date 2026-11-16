@@ -1252,3 +1252,80 @@ snapshot of both builds, so nothing visible moved.
   identity), the debounced settings write, the back chain (`true`, `true`, `false`) and the flat
   and tilted `elementFromPoint` hit-tests (all six controls resolving to themselves). The page goes
   from 84,639 to 86,427 bytes.
+
+## Backlog added after the 75 items above were cleared (found 2026-11-16)
+
+- [x] 76. A `play()` the page itself superseded is reported as "Can't play this file".
+  **Symptom.** `playRefused()` classifies every rejection of `au.play()` except `NotAllowedError`
+  and `SecurityError` as a failure of the file, and sets `data-blocked`, clears the swap window and
+  announces `ERR_PLAY` in the status region. But the element also rejects a `play()` with
+  `AbortError` whenever the request is superseded - "interrupted by a new load request" or "by a
+  call to pause()" - and both of those are things this page does on every track change and every
+  deliberate pause. Measured on 8.8 in headless Chromium with three 60 s tracks picked and playing,
+  then three `#next` taps 120 ms apart: three rejections, all `AbortError: The play() request was
+  interrupted by a new load request`; `#app` went `data-blocked="0"` -> `"1"` and the `#live`
+  status region read "Can't play this file" while the player was playing - `playing` true,
+  `au.paused` false, `#pp` `aria-pressed="true"` - and 2.5 s later it still read `"1"` and the same
+  sentence, because only a later play that settles successfully clears it. The same rejection also
+  ran `clearSwitching()`, so `swapAt` was `null` 150 ms after a tap that had just armed the 700 ms
+  window the new source needs: the pause that swap queues is no longer recognised as the swap's and
+  is painted as the listener's stop. Two more paths reach the same place: the `pagehide` teardown
+  (`releaseUrls()` pauses the element, so the pending autoplay rejects) left `data-blocked="1"` on
+  the way out, and walking past one undecodable file lets the superseded attempt's late
+  `NotSupportedError` announce "Can't play this file" over the good track the skip chain moved to.
+  **Fix.** `playRefused()` returns immediately on `AbortError` - a play the page itself interrupted
+  is not a failure of the file, so it must not set `data-blocked`, must not announce, must not drop
+  the swap window and must not paint a stop. Each attempt also carries a token, and a rejection
+  from an attempt that is no longer the current one is dropped, so a stale failure cannot talk over
+  the track that replaced it. Nothing on screen changes: `data-blocked` is read by no selector and
+  the status region is off-screen, so the only difference is that the false report stops.
+  **Fixed in 8.9.** `playRefused()` now returns before anything else when the rejection is an
+  `AbortError`, and each `attemptPlay()` carries a token (`playToken`) that a rejection must still
+  match to be reported at all, so an attempt whose source has already been replaced cannot speak
+  for the track that replaced it. Verified on 8.8 and 8.9 side by side with the same harness: three
+  `#next` taps 120 ms apart on a playing playlist still produce the same three `AbortError`
+  rejections on both builds, but on 8.8 `data-blocked` reads `"1"` and `#live` "Can't play this
+  file" over a player that is playing (`playing` true, `au.paused` false, `aria-pressed` `"true"`),
+  still `"1"` 2.5 s later, and `swapAt` is `null` 150 ms after the tap; on 8.9 `data-blocked` stays
+  `"0"`, `#live` stays empty, and `swapAt` still holds the window the load armed
+  (`swapping()` true). The `pagehide` teardown that pauses the element no longer leaves
+  `data-blocked="1"` on the way out, and one undecodable file in a three-track list is now skipped
+  silently - measured with a dispatched `error`: on 8.8 `#live` reads "Can't play this file" over
+  the good track the chain walked to (`blocked` `"1"`), on 8.9 `blocked` stays `"0"` and `#live`
+  empty. The give-up path is unchanged on both: three consecutive `error` events still end at
+  `blocked` `"1"`, `stopped` true, `fails` 1, `idx` 0 and "Stopped after 3 unplayable tracks. Can't
+  play this file." on 8.8 and 8.9 alike. Everything else is unchanged on both: the behaviour
+  harness reports the same picking (2 rows, an exact repeat leaves 2, a same-name file of a
+  different size is a 3rd), the title after a row jump, row reuse (node identity), the debounced
+  settings write, the back chain (`true`, `true`, `false`), play/pause toggling a playlist that
+  plays, and the flat and tilted `elementFromPoint` hit-tests (all six controls resolving to
+  themselves). Markup and stylesheet are byte-identical to 8.8 - the 20,695 bytes before `<script>`
+  compare equal. The page goes from 86,433 to 87,963 bytes.
+
+- [ ] 77. The seek drag writes the three nodes `tuCache` mirrors and never invalidates the cache.
+  **Symptom.** `tuCache` exists so `ontimeupdate` can skip writes it has already made, and its
+  comment states the rule every writer must follow: "reset whenever we write these nodes
+  elsewhere". `resetSeek()` follows it. `sk.oninput` does not: it writes `#seek`'s `--p` and
+  `value` and `#cur`, and leaves the cache holding the pre-drag values, so the next tick compares
+  against a value the DOM no longer has and skips the write it owes. With a usable duration the
+  drag's own seek masks it; with none it does not. Measured on 8.8 in headless Chromium with the
+  media reporting `duration = Infinity` (the VBR/stream case item 75 is about), where the bar is
+  correctly `aria-disabled="true"` with no `aria-valuetext`: dragging it to 70 left `--p` at `70%`
+  and `value` at `70`, and 600 ms of ticks later it was still `70%`/`70` under a clock counting
+  from a position the bar does not hold, because every tick computed `0%` and found `0%` already in
+  the cache. Item 75 established that in that state the bar holds `0` and a `0%` fill.
+  **Fix.** Invalidate `tuCache.p`, `tuCache.v` and `tuCache.cur` in the drag handler, so the next
+  tick re-owns the bar. With a usable duration the values the tick then writes are the ones the
+  drag already wrote, so nothing visible changes.
+
+- [ ] 78. A restored setting is checked against its slider's min/max but not its step.
+  **Symptom.** The settings guard accepts a stored value when it is a finite number inside `LIM`,
+  and `syncSlider()` then writes the thumb from `S` and the readout from `S`, while the slider's own
+  `input` handler writes the readout from `el.value`. A stored value off the control's `step`
+  therefore lands in four spellings at once. Measured on 8.8 in headless Chromium with
+  `glass.settings.v1` holding `glass: 2.5` (inside `LIM` `[2,50]`, and the only writer this page
+  has produces integers): `S.glass` 2.5, `#gl.value` `"3"` because the range snaps to its step,
+  `#glV` `"2.5%"` and `--glass` `0.025` - the thumb, the label and the card disagree, and the next
+  discrete toggle writes 2.5 back to storage so it survives.
+  **Fix.** Accept a restored value only when it is also on the slider's `step` grid (or snap it to
+  that grid), so the thumb, the readout and the custom property cannot disagree.

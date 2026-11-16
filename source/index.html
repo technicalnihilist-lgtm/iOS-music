@@ -393,7 +393,23 @@ function playError(n){
   EL.artist.textContent=ERR_PLAY;
   if(n)setBlocked(true,(n>1?'Stopped after '+n+' unplayable tracks. ':'')+ERR_PLAY+'.');
 }
-function playRefused(err){
+/* A `play()` the page itself interrupted is not a failure of the file. The element rejects the
+   request with `AbortError` whenever it is superseded - "interrupted by a new load request", or
+   "interrupted by a call to pause()" - and this page does both on every track change and every
+   deliberate pause, so every fast Next used to be reported as a file that cannot play:
+   `data-blocked` went to `"1"`, the status region announced "Can't play this file" over a player
+   that was playing, and nothing cleared it until a later play settled. The same rejection also ran
+   `clearSwitching()`, dropping the swap window the new source had just armed, so the pause that
+   swap queues was painted as the listener's stop. An aborted attempt therefore says nothing at
+   all: no blocked state, no announcement, no swap-window change, no stop painted.
+   Each attempt also carries a token. A rejection from an attempt that is no longer the current one
+   belongs to a source that has already been replaced, so it is dropped too - otherwise the late
+   `NotSupportedError` of an undecodable file the skip chain has already walked past announces
+   "Can't play this file" over the good track that replaced it. */
+let playToken=0;   // which play() attempt is the current one; a stale rejection is not ours to report
+function playRefused(err,token){
+  if(err&&err.name==='AbortError')return;
+  if(token!==undefined&&token!==playToken)return;
   const denied=!!err&&(err.name==='NotAllowedError'||err.name==='SecurityError');
   clearSwitching();
   if(au.paused){
@@ -410,10 +426,11 @@ function attemptPlay(){
   stopped=false;               /* any fresh attempt gets a fresh budget of announcements */
   wantPlay=true;               /* an explicit request to play, for the skip chain to honour */
   pauseAsked=false;            /* a play request supersedes a pause that has not landed yet */
+  const token=++playToken;     /* this attempt's identity, so a stale rejection can be recognised */
   let p;
-  try{p=au.play()}catch(e){playRefused(e);return}
+  try{p=au.play()}catch(e){playRefused(e,token);return}
   if(!p||typeof p.then!=='function')return;
-  p.then(()=>setBlocked(false,'')).catch(playRefused);
+  p.then(()=>setBlocked(false,'')).catch(e=>playRefused(e,token));
 }
 
 const fmt=s=>{
