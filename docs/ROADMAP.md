@@ -1221,7 +1221,7 @@ snapshot of both builds, so nothing visible moved.
   chain (`true`, `true`, `false`), play/pause toggling a playlist that plays, and the flat and
   tilted `elementFromPoint` hit-tests (all six controls resolving to themselves). The page goes
   from 83,896 to 84,639 bytes.
-- [ ] 75. The seek bar is dead while the clock runs whenever the media reports no usable duration.
+- [x] 75. The seek bar is dead while the clock runs whenever the media reports no usable duration.
   **Symptom.** `ontimeupdate` computes the position as `0` unless `duration` is finite and
   positive, but writes `#cur` and the slider's `aria-valuetext` from `currentTime` regardless, so
   a source whose duration reads `Infinity` (some VBR MP3s and streams do until their header is
@@ -1230,3 +1230,25 @@ snapshot of both builds, so nothing visible moved.
   `--:--`, but `#cur` reads `1:35`, the slider's `value` is `0`, its `--p` fill is `0%` and its
   `aria-valuetext` reads `1:35` - the bar never moves, and the control announces a position it
   does not hold.
+  **Fixed in 8.8.** `setSeekAvail()` is the one place the control's availability is decided, and it
+  is driven by the same `isFinite(d)&&d>0` test the position maths already uses: while the duration
+  is unusable the slider carries `aria-disabled="true"` and no `aria-valuetext` at all, so it no
+  longer announces a position it does not hold, while `#cur` keeps counting exactly as before and
+  the bar keeps its `0` value and `0%` fill. The moment a usable duration arrives - `showDur()` on
+  `loadedmetadata`/`durationchange`, or the next `timeupdate` - the attribute is removed and the
+  real position is announced again, and `resetSeek()` re-applies the state for a new or emptied
+  playlist so a fresh page starts `"true"` rather than `null`. The drag handler skips its
+  `aria-valuetext` write under the same condition, since with no duration there is no position to
+  convert into. Attributes only: the markup and stylesheet are byte-identical to 8.7 (the 20,690
+  bytes before `<script>` compare equal). Verified on 8.7 and 8.8 side by side in headless
+  Chromium with `duration = Infinity` and `currentTime = 95`: on 8.7 the slider's `aria-valuetext`
+  reads `1:35` and `aria-disabled` is `null`, on 8.8 `aria-valuetext` is absent and
+  `aria-disabled` is `"true"`, on both `#cur` reads `1:35`, `#dur` reads `--:--`, `value` is `0`
+  and `--p` is `0%`; giving the same page a 240 s duration puts `value` at `39.6`, `--p` at
+  `39.583%`, `aria-valuetext` at `1:35` and `#dur` at `4:00` on both, and a `NaN` duration takes
+  8.8 back to absent/`"true"` where 8.7 kept the stale `1:35`. Everything else is unchanged on
+  both: the behaviour harness reports the same picking (2 rows, an exact repeat leaves 2, a
+  same-name file of a different size is a 3rd), the title after a row jump, row reuse (node
+  identity), the debounced settings write, the back chain (`true`, `true`, `false`) and the flat
+  and tilted `elementFromPoint` hit-tests (all six controls resolving to themselves). The page goes
+  from 84,639 to 86,427 bytes.

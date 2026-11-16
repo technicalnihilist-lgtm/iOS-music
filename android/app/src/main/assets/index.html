@@ -467,6 +467,28 @@ function clearSession(){
 
 /* last values written by the timeupdate handler; reset whenever we write these nodes elsewhere */
 const tuCache={p:null,v:null,cur:null,dur:null};
+/* The seek bar can only express a position while the media has a usable duration: its value is a
+   percentage of `duration`, so with a non-finite one the bar sits at 0 and `oninput` has no domain
+   to convert a position into - dragging it does nothing. The clock, correctly, keeps counting.
+   What was wrong is that the control went on announcing that elapsed time as its own value: a
+   screen reader read "1:35" from a bar holding 0, a position it does not hold. While the duration
+   is unusable the control is marked unavailable and carries no position text; the moment a usable
+   duration arrives - `showDur()` on loadedmetadata/durationchange, or a timeupdate - it is put
+   back to exactly the state it had before. Attributes only, so nothing on screen moves. */
+let seekLive=null;
+function setSeekAvail(ok,txt){
+  if(seekLive===ok)return;
+  seekLive=ok;
+  const sk=EL.seek;
+  if(ok){
+    sk.removeAttribute('aria-disabled');
+    setVT(sk,txt===undefined?fmt(au.currentTime):txt);   /* the position the bar now holds */
+    tuCache.cur=null;                /* ...and let timeupdate keep it in step */
+  }else{
+    sk.setAttribute('aria-disabled','true');
+    sk.removeAttribute('aria-valuetext');   /* no position to announce */
+  }
+}
 function resetSeek(){
   const sk=EL.seek;
   sk.value=0;sk.style.setProperty('--p','0%');
@@ -474,6 +496,9 @@ function resetSeek(){
   setVT(sk,'0:00');
   EL.dur.textContent='--:--';
   tuCache.p=tuCache.v=tuCache.cur=tuCache.dur=null;
+  const d=au.duration;
+  seekLive=null;                     /* this reset writes the value text itself, so re-apply */
+  setSeekAvail(isFinite(d)&&d>0,'0:00');
 }
 
 function load(i,autoplay,dir){
@@ -606,19 +631,22 @@ au.onerror=()=>{
 /* fires ~4x/s: only touch the DOM when a value has actually changed */
 au.ontimeupdate=()=>{
   const d=au.duration;
+  const ok=isFinite(d)&&d>0;
+  setSeekAvail(ok);            /* no usable duration: the bar holds no position to announce */
   if(!dragging){
     /* a stream can report a currentTime past its header duration (VBR MP3s and some WAVs do),
        which handed the bar a position outside [0, duration]; clamp it to the track's domain */
-    const p=(isFinite(d)&&d>0)?Math.min(100,Math.max(0,au.currentTime/d*100)):0;
+    const p=ok?Math.min(100,Math.max(0,au.currentTime/d*100)):0;
     const sk=EL.seek;
     const ps=p+'%';
     if(tuCache.p!==ps){tuCache.p=ps;sk.style.setProperty('--p',ps)}
     const pv=Math.round(p*10)/10;      /* step="0.1": the input snaps to this either way */
     if(tuCache.v!==pv){tuCache.v=pv;sk.value=pv}
     const cs=fmt(au.currentTime);
-    if(tuCache.cur!==cs){tuCache.cur=cs;EL.cur.textContent=cs;setVT(sk,cs)}
+    /* the clock keeps counting either way; only the bar's own value text waits for a duration */
+    if(tuCache.cur!==cs){tuCache.cur=cs;EL.cur.textContent=cs;if(ok)setVT(sk,cs)}
   }
-  if(isFinite(d)&&d>0){
+  if(ok){
     const ds=fmt(d);
     if(tuCache.dur!==ds){tuCache.dur=ds;EL.dur.textContent=ds}
   }
@@ -629,7 +657,9 @@ au.ontimeupdate=()=>{
    resetSeek() writes, so the readout says "we don't know yet" instead of "nothing to play". */
 const durOk=()=>{const d=au.duration;return isFinite(d)&&d>0};
 function showDur(){
-  if(!durOk()){tuCache.dur=null;EL.dur.textContent='--:--';return}
+  const ok=durOk();
+  setSeekAvail(ok);            /* metadata can make the bar usable (or take it away) on its own */
+  if(!ok){tuCache.dur=null;EL.dur.textContent='--:--';return}
   const ds=fmt(au.duration);
   if(tuCache.dur!==ds){tuCache.dur=ds;EL.dur.textContent=ds}
 }
@@ -651,12 +681,13 @@ sk.oninput=e=>{
   if(+e.target.value!==v)e.target.value=v;
   e.target.style.setProperty('--p',v+'%');
   const d=au.duration;
-  if(isFinite(d)&&d>0){
+  const ok=isFinite(d)&&d>0;
+  if(ok){
     const t=Math.min(d,Math.max(0,v/100*d));
     if(isFinite(t))au.currentTime=t;
   }
   EL.cur.textContent=fmt(au.currentTime);
-  setVT(e.target,fmt(au.currentTime));
+  if(ok)setVT(e.target,fmt(au.currentTime));   /* a position only while the bar can express one */
 };
 ['pointerdown','touchstart'].forEach(ev=>sk.addEventListener(ev,()=>{dragging=true},{passive:true}));
 ['pointerup','pointercancel','touchend','touchcancel','blur'].forEach(ev=>sk.addEventListener(ev,()=>{dragging=false},{passive:true}));
