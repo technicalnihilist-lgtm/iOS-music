@@ -705,6 +705,12 @@ sk.oninput=e=>{
   }
   EL.cur.textContent=fmt(au.currentTime);
   if(ok)setVT(e.target,fmt(au.currentTime));   /* a position only while the bar can express one */
+  /* the drag just wrote the three nodes tuCache mirrors, so it follows the rule its declaration
+     states and invalidates them: leaving the pre-drag values there made the next tick compare
+     against a state the DOM no longer holds and skip the write it owed. With a usable duration
+     the tick rewrites exactly what the drag wrote, so nothing on screen moves; without one it can
+     now put the bar back where the media actually is instead of leaving it stuck at the drag. */
+  tuCache.p=tuCache.v=tuCache.cur=null;
 };
 ['pointerdown','touchstart'].forEach(ev=>sk.addEventListener(ev,()=>{dragging=true},{passive:true}));
 ['pointerup','pointercancel','touchend','touchcancel','blur'].forEach(ev=>sk.addEventListener(ev,()=>{dragging=false},{passive:true}));

@@ -1302,7 +1302,7 @@ snapshot of both builds, so nothing visible moved.
   themselves). Markup and stylesheet are byte-identical to 8.8 - the 20,695 bytes before `<script>`
   compare equal. The page goes from 86,433 to 87,963 bytes.
 
-- [ ] 77. The seek drag writes the three nodes `tuCache` mirrors and never invalidates the cache.
+- [x] 77. The seek drag writes the three nodes `tuCache` mirrors and never invalidates the cache.
   **Symptom.** `tuCache` exists so `ontimeupdate` can skip writes it has already made, and its
   comment states the rule every writer must follow: "reset whenever we write these nodes
   elsewhere". `resetSeek()` follows it. `sk.oninput` does not: it writes `#seek`'s `--p` and
@@ -1317,6 +1317,19 @@ snapshot of both builds, so nothing visible moved.
   **Fix.** Invalidate `tuCache.p`, `tuCache.v` and `tuCache.cur` in the drag handler, so the next
   tick re-owns the bar. With a usable duration the values the tick then writes are the ones the
   drag already wrote, so nothing visible changes.
+  **Done (9.0).** `sk.oninput` now ends by clearing `tuCache.p`, `tuCache.v` and `tuCache.cur`, the
+  way `resetSeek()` already did. Measured on 8.9 and 9.0 in headless Chromium with `duration`
+  stubbed to `Infinity` and `currentTime` counting: on both, the bar seeds at `--p` `0%` / `value`
+  `0` with `aria-disabled="true"`, no `aria-valuetext` and `#dur` `--:--`, and a drag to 70 moves it
+  to `70%`/`70`; six further ticks leave 8.9 at `70%`/`70` and return 9.0 to `0%`/`0`, while `#cur`
+  keeps counting to `11:40` on both. With a usable 300 s duration the drag seeks (`currentTime`
+  150) and the next tick rewrites exactly the drag's own `50%`/`50` on both, so nothing visible
+  changes. Everything else is unchanged on both: picking (2 rows, an exact repeat leaves 2, a
+  same-name file of a different size is a 3rd), the title after a row jump, row reuse (node
+  identity), the debounced settings write, the back chain (`true`, `true`, `false`), and the flat
+  and tilted `elementFromPoint` hit-tests (all six controls resolving to themselves). Markup and
+  stylesheet are byte-identical to 8.9 - the 20,690 bytes before `<script>` compare equal. The page
+  goes from 87,963 to 88,488 bytes.
 
 - [ ] 78. A restored setting is checked against its slider's min/max but not its step.
   **Symptom.** The settings guard accepts a stored value when it is a finite number inside `LIM`,
