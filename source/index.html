@@ -906,8 +906,30 @@ const DEF={glass:18,blur:28,depth:60,tilt:100,par:100,glow:100,shadow:100,drift:
    min/max, 0 or 1 for the drift switch, one of the three motion modes. Anything else keeps the
    default, which is the only value guaranteed to be a working one. A value this page could have
    written is kept exactly as stored, so an ordinary session restores what it saved. */
+/* Which slider drives which setting. Declared here, ahead of the restore below, because the
+   restore needs the control behind a key to know the grid its value has to sit on. */
+const SLIDERS=[['gl','glass','%'],['bl','blur',''],['dp','depth','%'],['tl','tilt','%'],
+               ['pr','par','%'],['gv','glow','%'],['sd','shadow','%']];
 const LIM={glass:[2,50],blur:[0,60],depth:[0,100],tilt:[0,150],par:[0,200],glow:[0,200],shadow:[0,200]};
 const MODES=['auto','touch','off'];
+/* The guard above checks a stored value against its slider's min/max, but a range input also snaps
+   whatever it is handed to its own step grid. A stored value off that grid therefore landed in the
+   page in two spellings at once: `S` and the readout kept the stored number while the thumb showed
+   the snapped one, and the next discrete toggle wrote the off-grid value straight back. A restored
+   value is now snapped to the same grid the control uses, so `S`, the thumb, the readout and the
+   custom property cannot disagree. A value the page itself could have written is already on the
+   grid, so an ordinary session restores exactly what it saved. */
+function onGrid(k,v){
+  const row=SLIDERS.filter(s=>s[1]===k)[0];
+  const el=row&&$(row[0]);
+  if(!el)return v;
+  const min=+el.min||0,top=+el.max;
+  const raw=el.step,step=raw===''?1:+raw;       /* no `step` attribute: the range default, 1 */
+  if(!(step>0))return v;                        /* step="any": every value in range is legal */
+  let g=min+Math.round((v-min)/step)*step;
+  if(isFinite(top))g=Math.min(top,g);
+  return +g.toFixed(6);                         /* the arithmetic leaves float dust behind */
+}
 let S=Object.assign({},DEF);
 try{
   const raw=localStorage.getItem('glass.settings.v1');
@@ -919,7 +941,7 @@ try{
       if(k==='motion'){if(MODES.indexOf(v)>-1)S.motion=v;return}
       if(k==='drift'){if(v===0||v===1||v===true||v===false)S.drift=v?1:0;return}
       const lim=LIM[k];
-      if(lim&&typeof v==='number'&&isFinite(v)&&v>=lim[0]&&v<=lim[1])S[k]=v;
+      if(lim&&typeof v==='number'&&isFinite(v)&&v>=lim[0]&&v<=lim[1])S[k]=onGrid(k,v);
     });
   }
 }catch(e){}
@@ -1045,8 +1067,6 @@ function applyS(){
   paint();
 }
 
-const SLIDERS=[['gl','glass','%'],['bl','blur',''],['dp','depth','%'],['tl','tilt','%'],
-               ['pr','par','%'],['gv','glow','%'],['sd','shadow','%']];
 /* Each slider's input and its numeric readout are fixed for the life of the page, but the readout
    was looked up again on every `input` event - a drag fires those continuously - and syncSlider()
    looked both of them up on every call. They are resolved once here instead, so a drag frame costs
