@@ -1113,6 +1113,19 @@ function setHue(h){
    control rather than repeated as a literal that could drift from it. */
 const HUE0=+EL.hu.defaultValue;
 if(EL.hu)EL.hu.oninput=()=>setHue(+EL.hu.value);
+/* Nothing calls setHue() on a fresh page. With no track painted, no drag and no reset, the
+   control kept the markup's value, its readout and its aria-valuetext while the fourth value
+   `setHue()` writes - the `--p` fill - was never written at all, so `input[type=range]`'s
+   `var(--p,0%)` drew the track empty under a thumb sitting at 250 of 360. The seven sliders in
+   `SL` are all seeded by `syncSlider()` at startup; the hue is the one control that was not.
+   Measured on 9.1 in headless Chromium on a fresh page: `#hu` carries no `--p` at all, its
+   computed background is `#fff 0%, rgba(255,255,255,.25) 0%` - no fill - while `value` is 250,
+   the readout says "250°" and the thumb sits at 69.4%; the other seven sliders all carry their
+   fill, the sheet's own screenshot shows Colour shift filled at 265°, and a `Reset defaults` on
+   the same empty player paints it. Seeding the group from the control's own value here makes the
+   fill agree with the thumb and the readout from the first frame. `--h` is written with the value
+   `:root` already carries, so the backdrop, the card and every other control are untouched. */
+if(EL.hu)setHue(HUE0);
 
 if(segEl)segEl.onclick=e=>{
   const b=e.target.closest('[data-m]');if(!b)return;

@@ -146,6 +146,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 9.2 — the Colour shift slider now draws its fill on a fresh launch, instead of an empty track under a thumb two thirds along it
+
+- `setHue()` is the only writer of that control's `--h`, value, readout and `--p` fill, and nothing called it on a fresh page - no track painted, no drag, no reset, and the hue is not one of the seven sliders `syncSlider()` seeds at startup - so `var(--p,0%)` drew the track empty while the thumb sat at 250 of 360 and the readout said "250°"; it is now seeded from the control's own value where its drag handler is bound (measured on 9.1: no `--p` and a `0%`/`0%` gradient against a 69.4% thumb; on 9.2: `--p` 69.44444444444444% and a `69.4444%`/`69.4444%` gradient, the fill the other seven sliders, the sheet's own screenshot and a `Reset defaults` already show), with every other value, readout, aria attribute and element rect identical, the now-playing card pixel-identical and the open sheet differing only on that track's own 8px band.
+
 ### 9.1 — a restored setting is now snapped to its slider's step grid
 
 - the restore guard accepted a stored value inside the slider's min/max but not on its `step` grid, so a `glass` of 2.5 (the only writer this page has produces integers) landed in four spellings at once - `S.glass` 2.5, `#gl.value` `"3"`, `#glV` `"2.5%"` and `--glass` `0.025` - and the next discrete toggle wrote 2.5 straight back to storage so it survived the session; an accepted value is now snapped with the control's own step base and step (absent `step` means the range default of 1, `step="any"` is left alone), which puts all four at 3 and stores `3` (measured on 9.0 with `glass: 2.5` stored: `2.5`/`"3"`/`"2.5%"`/`0.025`; on 9.1: `3`/`"3"`/`"3%"`/`0.03` with the fill at the thumb's `2.083%`, while a blob of ordinary values restores exactly and a junk blob still falls back to the defaults), markup and stylesheet byte-identical to 9.0 and the harness reporting the same picking, dedupe, row reuse, settings write, back chain and flat/tilted hit-tests.

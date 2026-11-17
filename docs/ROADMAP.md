@@ -1357,3 +1357,48 @@ snapshot of both builds, so nothing visible moved.
   the back chain (`true`, `true`, `false`), and the flat and tilted `elementFromPoint` hit-tests
   (all six controls resolving to themselves). Markup and stylesheet are byte-identical to 9.0 - the
   20,695 bytes before `<script>` compare equal. The page goes from 88,488 to 89,857 bytes.
+
+- [x] 79. The Colour shift slider's track shows no fill at all on a fresh launch, under a thumb
+  that sits two thirds of the way along it.
+  **Symptom.** Open the options sheet on a page that has not had a song added yet. Transparency,
+  Blur, Depth, Tilt, Parallax, Light and Shadow all draw their white fill up to the thumb; Colour
+  shift draws none, while its thumb sits at 250 of 360 and its readout says "250°". The fill and
+  the thumb are two readings of one value and they disagree by 69% of the track. `setHue()` is the
+  only writer of that control's four values - `--h`, the slider's value, its readout and its `--p`
+  fill - and nothing calls it on a fresh page: `paintTrack()` needs a track, the drag and `Reset
+  defaults` need a gesture, and the hue is not one of the seven sliders in `SL` that `syncSlider()`
+  seeds at startup. So `input[type=range]`'s `var(--p,0%)` fallback drew the track empty.
+  **Fix.** Seed the group from the control's own value once at startup, through the one function
+  that writes it, so the fill, the thumb and the readout agree from the first frame.
+  **Done (9.2).** `if(EL.hu)setHue(HUE0);` now runs where the hue's drag handler is bound, so the
+  fill is written before the sheet can be opened. Measured in headless Chromium on a fresh page:
+  9.1 carries no `--p` on `#hu` and computes `linear-gradient(90deg,#fff 0%,rgba(255,255,255,.25)
+  0%)` - no fill - against `value` 250, readout "250°", `aria-valuetext` "250 degrees" and a thumb
+  at 69.4%; 9.2 carries `--p` `69.44444444444444%` and computes the same gradient at
+  `69.4444%`/`69.4444%`, the fill the seven other sliders already had, the fill screenshot 03 of
+  the sheet documents at 265°, and the fill a `Reset defaults` on the same empty player already
+  painted. Nothing else moves: a full state snapshot of both builds - every slider's value, `--p`,
+  readout and `aria-valuetext`, the seek bar's, `--glass`/`--blur`/`--h`/`--tiltk`/`--park`/`--mx`/
+  `--my`/`--lx`/`--ly`/`--glow`, the app's class and `data-blocked`, the transport's `aria-pressed`,
+  the sheet's `aria-expanded`, the drift switch, the three motion buttons, the title, artist, clock
+  and playlist, and the 22 element rects - differs in exactly the two hue-fill entries. At
+  420x900 with animations and transitions frozen and `--mx`/`--my` pinned, the now-playing card is
+  pixel-identical (0 of 378,000 pixels differ) and the open sheet differs only inside
+  (40,367)-(262,375): 1,774 pixels, all of them on the hue track's own 8px band. Markup and
+  stylesheet are byte-identical to 9.1 - the 20,690 bytes before `<script>` compare equal - and
+  the behaviour harness reports the same picking (2 rows, an exact repeat leaves 2, a same-name
+  file of a different size is a 3rd), the title after a row jump, row reuse (node identity), the
+  debounced settings write (`#gl` at 40 lands `glass:40` and `--glass` 0.4), the back chain
+  (`true`, `true`, `false`) and the flat and tilted `elementFromPoint` hit-tests (all six controls
+  resolving to themselves), with no console error. The page goes from 89,857 to 91,023 bytes.
+
+- [ ] 80. `setHue()` derives the slider's fill from a literal 0-360 domain instead of the control's
+  own range.
+  **Symptom.** Every other slider's fill is `(value - min) / (max - min)` - `syncSlider()` and each
+  `input` handler both spell it that way - but the hue's is `h / 360 * 100`, a second copy of the
+  rule that knows the markup's `min="0" max="360"` only as a literal. The fill and the thumb agree
+  today because that is what the markup happens to say; move either end of the range and the fill
+  silently stops following the thumb, which is the same disagreement item 79 just fixed at
+  startup, one markup change away from coming back.
+  **Fix.** One fill helper, used by `syncSlider()`, the slider `input` handlers and `setHue()`, that
+  reads the control's own `min`/`max`, so there is one spelling of the rule rather than two.
