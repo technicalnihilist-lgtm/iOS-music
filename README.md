@@ -146,6 +146,10 @@ To change the UI, edit `source/index.html`, copy it to
 
 ## Changelog
 
+### 9.1 — a restored setting is now snapped to its slider's step grid
+
+- the restore guard accepted a stored value inside the slider's min/max but not on its `step` grid, so a `glass` of 2.5 (the only writer this page has produces integers) landed in four spellings at once - `S.glass` 2.5, `#gl.value` `"3"`, `#glV` `"2.5%"` and `--glass` `0.025` - and the next discrete toggle wrote 2.5 straight back to storage so it survived the session; an accepted value is now snapped with the control's own step base and step (absent `step` means the range default of 1, `step="any"` is left alone), which puts all four at 3 and stores `3` (measured on 9.0 with `glass: 2.5` stored: `2.5`/`"3"`/`"2.5%"`/`0.025`; on 9.1: `3`/`"3"`/`"3%"`/`0.03` with the fill at the thumb's `2.083%`, while a blob of ordinary values restores exactly and a junk blob still falls back to the defaults), markup and stylesheet byte-identical to 9.0 and the harness reporting the same picking, dedupe, row reuse, settings write, back chain and flat/tilted hit-tests.
+
 ### 9.0 — the seek drag now invalidates the value cache `ontimeupdate` compares against
 
 - `tuCache` exists so `ontimeupdate` can skip writes it has already made, and its own comment requires every other writer of those three nodes to reset it; `sk.oninput` wrote `#seek`'s `--p` and `value` and `#cur` and left the pre-drag values cached, so with no usable duration the next tick compared against a state the DOM no longer held and skipped the write it owed, leaving the bar at `70%`/`70` while the clock counted on (measured on 8.9 with `duration` `Infinity`: still `70%`/`70` after 600 ms of ticks; on 9.0 it returns to `0%`/`0`, and with a usable duration the tick rewrites exactly what the drag wrote, so nothing visible changes), markup and stylesheet byte-identical to 8.9 and the harness reporting the same picking, dedupe, row reuse, settings write, back chain and flat/tilted hit-tests.
