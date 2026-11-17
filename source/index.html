@@ -1073,11 +1073,20 @@ function applyS(){
    no document lookup for the two nodes it writes. */
 const SL={};
 SLIDERS.forEach(([id,key,suf])=>{const el=$(id);if(el)SL[id]={el,out:$(id+'V'),key,suf}});
+/* One spelling of the fill rule. A slider's painted fraction is where its value sits inside the
+   control's own range, so the fill is derived from the `min`/`max` the markup declares rather than
+   from a copy of them: `syncSlider()`, every slider's `input` handler and `setHue()` all go through
+   this, and moving either end of a range can no longer leave a fill that disagrees with its thumb. */
+function fillPct(el,v){
+  const lo=+el.min,hi=+el.max;
+  return hi>lo?((v-lo)/(hi-lo)*100):0;
+}
+function setFill(el,v){el.style.setProperty('--p',fillPct(el,v)+'%')}
 function syncSlider(id){
   const s=SL[id];if(!s)return;
   const el=s.el;
   el.value=S[s.key];
-  el.style.setProperty('--p',((S[s.key]-el.min)/(el.max-el.min)*100)+'%');
+  setFill(el,S[s.key]);
   if(s.out)s.out.textContent=S[s.key]+s.suf;
   setVT(el,vtOf(id,S[s.key]));
 }
@@ -1086,7 +1095,7 @@ Object.keys(SL).forEach(id=>{
   syncSlider(id);
   el.oninput=()=>{
     S[key]=+el.value;
-    el.style.setProperty('--p',((el.value-el.min)/(el.max-el.min)*100)+'%');
+    setFill(el,el.value);
     if(s.out)s.out.textContent=el.value+s.suf;
     setVT(el,vtOf(id,el.value));
     applyS();saveSSoon();
@@ -1107,7 +1116,7 @@ Object.keys(SL).forEach(id=>{
 function setHue(h){
   root.setProperty('--h',h);
   EL.hu.value=h;EL.huV.textContent=h+'°';setVT(EL.hu,vtOf('hu',h));
-  EL.hu.style.setProperty('--p',(h/360*100)+'%');
+  setFill(EL.hu,h);
 }
 /* The hue with no track on the card is whatever the markup and `:root` start with, read from the
    control rather than repeated as a literal that could drift from it. */
