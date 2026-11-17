@@ -1402,3 +1402,68 @@ snapshot of both builds, so nothing visible moved.
   startup, one markup change away from coming back.
   **Fix.** One fill helper, used by `syncSlider()`, the slider `input` handlers and `setHue()`, that
   reads the control's own `min`/`max`, so there is one spelling of the rule rather than two.
+
+## Backlog added after the 80 items above were cleared (found 2026-11-17)
+
+- [x] 81. `applyS()` rewrites the idle-drift switch on every slider-drag frame, for a mode no slider
+  can change.
+  **Symptom.** Item 51 guarded the motion segment in this function - the three buttons are now
+  repainted only when the mode they show has moved - and the switch beside them was left out. A
+  slider cannot change the drift mode, but every `input` event of every drag still ran
+  `driftEl.classList.toggle('off',!S.drift)` and rewrote `#driftBtn`'s `aria-pressed` with the value
+  it already held. Measured on 9.3 in headless Chromium with `setAttribute` and
+  `DOMTokenList.toggle` counted: a thirty-event drag of the Shadow slider (100 -> 129, one event per
+  frame) produced 30 `aria-pressed` writes and 30 `off` toggles, and a ten-event drag with the drift
+  already off produced 10 of each; `Reset defaults`, which normally leaves the drift exactly where
+  it was, wrote both again. Two DOM writes and a class-list toggle per frame of every settings drag,
+  for a control the drag never touches.
+  **Fix.** Remember the drift mode last painted, the way `segMode` beside it remembers the motion
+  segment, and write the class and the attribute only when it has moved.
+  **Done (9.4).** `applyS()` now compares `S.drift` against `pdrift` (undefined until the first
+  call, so the first paint always writes) and only then toggles `off` and writes `aria-pressed`.
+  Nothing else in the page touches either one - the only other handle on the wrapper, `syncBlobs()`,
+  writes `paused` - so the cache cannot go stale. The same instrumented drag on 9.4 reports 0
+  `aria-pressed` writes and 0 `off` toggles, and the ten-event drag with the drift off reports 0 and
+  0; the switch itself is unchanged in every state (off: `aria-pressed` "false", `off` present,
+  computed `animation-name` `none`; on: "true", no `off`, `sway`; after `Reset defaults`: on), the
+  stored blob is byte-identical, and the page is pixel-identical at 420x900 with animations and
+  transitions frozen and `--mx`/`--my` pinned (0 of 378,000 pixels differ, against a 0-pixel
+  run-to-run noise floor). Markup and stylesheet are byte-identical to 9.3 - the 20,690 bytes before
+  `<script>` compare equal - and the behaviour harness reports the same picking (3 rows, an exact
+  repeat leaves 3, a same-name file of a different size is a 4th), the same title after a row jump,
+  row reuse by node identity, the debounced settings write (`#gl` at 40 lands `glass:40` and
+  `--glass` 0.4), the back chain (`true`, `true`, `false`) and the flat and tilted
+  `elementFromPoint` hit-tests (all six controls resolving to themselves), with no console error.
+  The page goes from 91,458 to 92,510 bytes.
+
+- [ ] 82. `setHue()` writes all four of its values on every call, so `Reset defaults` repaints a hue
+  that is already on the card.
+  **Symptom.** `setHue()` writes `--h`, the slider's `value`, its readout and its `--p` fill
+  unconditionally, and its one caller that is not a drag is `Reset defaults` - which passes the
+  current track's own hue, the value the control is already showing - and the skip chain's give-up
+  branch, which repaints the track that is already on the card. Measured on 9.3 with every
+  `setProperty` and `textContent` write logged: pressing `Reset defaults` on a playing track wrote
+  `--h` 138, the readout "138°" and `--p` 38.333333333333336% again, four writes that changed
+  nothing, while `setVT()` beside them already skips its identical write. The whole reset is 19
+  writes; four of them are the hue control restating itself.
+  **Fix.** Compare each of the four against the last value written and skip the ones that have not
+  moved, the same way `setVT()`, `paint()` and `applyS()` already do - `paintTrack()` on a real
+  track change still writes all four, because there the hue really moves.
+
+- [ ] 83. `LIM` is a second copy of the eight sliders' own ranges, so one markup edit re-opens the
+  restore disagreement items 77 and 78 closed.
+  **Symptom.** A stored setting is accepted only if it sits inside `LIM[key]`, a hand-written table
+  of `[min,max]` pairs that restates what each range input already declares in its markup - the
+  same duplication item 80 removed from `setHue()`, where a literal 0-360 stood in for the
+  control's own range. `onGrid()` a few lines below already reaches the control through `SLIDERS`
+  and reads `el.min`/`el.max` from it, so the restore consults the markup and the table in turn.
+  Demonstrated on 9.3 by changing one attribute: with `#dp`'s `min` moved from 0 to 10 and a stored
+  `depth` of 5, `LIM.depth` still says `[0,100]`, so the value is accepted and snapped against the
+  control's own grid - the readout reads "5%", `aria-valuetext` "5%", the fill computes to
+  -5.555555555555555%, and the thumb sits at 10, the value the control can actually express. That is
+  the `S`-versus-thumb disagreement item 78 fixed, reachable by editing one attribute in the markup
+  and leaving the table behind.
+  **Fix.** Derive the accepted range from the control itself - `+el.min` and `+el.max` through the
+  same `SLIDERS` row `onGrid()` already uses - and delete `LIM`, so there is one spelling of every
+  range. Every value the current table accepts and the markup agrees with keeps restoring exactly as
+  it does today.
