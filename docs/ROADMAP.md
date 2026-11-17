@@ -1392,7 +1392,7 @@ snapshot of both builds, so nothing visible moved.
   (`true`, `true`, `false`) and the flat and tilted `elementFromPoint` hit-tests (all six controls
   resolving to themselves), with no console error. The page goes from 89,857 to 91,023 bytes.
 
-- [ ] 80. `setHue()` derives the slider's fill from a literal 0-360 domain instead of the control's
+- [x] 80. `setHue()` derives the slider's fill from a literal 0-360 domain instead of the control's
   own range.
   **Symptom.** Every other slider's fill is `(value - min) / (max - min)` - `syncSlider()` and each
   `input` handler both spell it that way - but the hue's is `h / 360 * 100`, a second copy of the
