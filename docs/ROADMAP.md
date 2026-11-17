@@ -1331,7 +1331,7 @@ snapshot of both builds, so nothing visible moved.
   stylesheet are byte-identical to 8.9 - the 20,690 bytes before `<script>` compare equal. The page
   goes from 87,963 to 88,488 bytes.
 
-- [ ] 78. A restored setting is checked against its slider's min/max but not its step.
+- [x] 78. A restored setting is checked against its slider's min/max but not its step.
   **Symptom.** The settings guard accepts a stored value when it is a finite number inside `LIM`,
   and `syncSlider()` then writes the thumb from `S` and the readout from `S`, while the slider's own
   `input` handler writes the readout from `el.value`. A stored value off the control's `step`
@@ -1342,3 +1342,18 @@ snapshot of both builds, so nothing visible moved.
   discrete toggle writes 2.5 back to storage so it survives.
   **Fix.** Accept a restored value only when it is also on the slider's `step` grid (or snap it to
   that grid), so the thumb, the readout and the custom property cannot disagree.
+  **Done (9.1).** The restore now snaps an accepted value onto the grid the control itself uses
+  (`onGrid()`: step base is the slider's `min`, an absent `step` attribute means the range default
+  of 1, `step="any"` is left alone, and the result is clamped to `max`). Measured on 9.0 and 9.1 in
+  headless Chromium with `glass.settings.v1` holding `glass: 2.5`: on 9.0 `S.glass` 2.5 with
+  `#gl.value` `"3"`, `#glV` `"2.5%"` and `--glass` `0.025`; on 9.1 all four read 3 - `"3"`, `"3%"`,
+  `0.03`, and the fill `2.083%` the thumb sits at - and a discrete write stores `"glass":3` instead
+  of 2.5. A stored blob of values the page itself writes (`glass` 22, `blur` 40, `depth` 70, `tilt`
+  120, `par` 90, `glow` 80, `shadow` 60, `drift` 0, `motion` `touch`) restores exactly on both, so
+  an ordinary session is unchanged, and the junk blob (`"abc"`, `-5`, `null`, `1e9`, `"nope"`) still
+  falls back to the defaults on both. Everything else is unchanged on both: the behaviour harness
+  reports the same picking (2 rows, an exact repeat leaves 2, a same-name file of a different size
+  is a 3rd), the title after a row jump, row reuse (node identity), the debounced settings write,
+  the back chain (`true`, `true`, `false`), and the flat and tilted `elementFromPoint` hit-tests
+  (all six controls resolving to themselves). Markup and stylesheet are byte-identical to 9.0 - the
+  20,695 bytes before `<script>` compare equal. The page goes from 88,488 to 89,857 bytes.
