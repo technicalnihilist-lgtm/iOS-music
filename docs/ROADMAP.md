@@ -1436,7 +1436,7 @@ snapshot of both builds, so nothing visible moved.
   `elementFromPoint` hit-tests (all six controls resolving to themselves), with no console error.
   The page goes from 91,458 to 92,510 bytes.
 
-- [ ] 82. `setHue()` writes all four of its values on every call, so `Reset defaults` repaints a hue
+- [x] 82. `setHue()` writes all four of its values on every call, so `Reset defaults` repaints a hue
   that is already on the card.
   **Symptom.** `setHue()` writes `--h`, the slider's `value`, its readout and its `--p` fill
   unconditionally, and its one caller that is not a drag is `Reset defaults` - which passes the
@@ -1449,6 +1449,26 @@ snapshot of both builds, so nothing visible moved.
   **Fix.** Compare each of the four against the last value written and skip the ones that have not
   moved, the same way `setVT()`, `paint()` and `applyS()` already do - `paintTrack()` on a real
   track change still writes all four, because there the hue really moves.
+
+  **Done (9.5).** `setHue()` compares the hue against `pHue`, the value it last painted - undefined
+  until the first call, so the startup seeding still writes everything - and returns before writing
+  anything when it has not moved. All four values it writes are pure functions of that one hue and
+  nothing else in the page touches `--h`, `#hu`'s `value`, its readout or its `--p` fill, so a
+  single remembered value cannot go stale the way four independent ones could. Instrumented on 9.4
+  and 9.5 in headless Chromium, counting `setProperty`, the `value` setter, `textContent` and
+  `aria-valuetext`: `Reset defaults` on a track whose hue is already on the card went from four
+  writes (`--h`, value, readout, `--p`) to zero, while a real track change (hue 0 -> 53) still
+  writes all four and a drag to 100 still writes all four, and the control ends in the same state
+  in every case (`value`, readout, `aria-valuetext`, `--h`, `--p` 14.722222222222223% at 53 and
+  27.77777777777778% at 100 on both builds). Markup and stylesheet are byte-identical to 9.4 - the
+  20,690 bytes before `<script>` compare equal - and the page is pixel-identical at 420x900 with
+  animations and transitions frozen and `--mx`/`--my` pinned, on both the player (0 of 378,000
+  pixels differ) and the open options sheet (0 of 378,000). The behaviour harness reports the same
+  picking (3 rows, an exact repeat leaves 3, a same-name file of a different size is a 4th), the
+  same title after a row jump, row reuse by node identity, the debounced settings write (`#gl` at
+  40 lands `glass:40` and `--glass` 0.4), the back chain (`true`, `true`, `false`) and the flat and
+  tilted `elementFromPoint` hit-tests (all six controls resolving to themselves), with no console
+  error. The page goes from 92,518 to 93,189 bytes.
 
 - [ ] 83. `LIM` is a second copy of the eight sliders' own ranges, so one markup edit re-opens the
   restore disagreement items 77 and 78 closed.

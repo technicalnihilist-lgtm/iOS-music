@@ -1126,8 +1126,18 @@ Object.keys(SL).forEach(id=>{
    the track's own survived the reset: the slider kept the dragged value and readout and `--h` kept
    the page hue (the blob field and the glass tint) shifted, until the next track change put it
    back. The four writes are now one function that both the drag and the reset go through, so a
-   reset restores the hue a track change would, and the stylesheet default when nothing is playing. */
+   reset restores the hue a track change would, and the stylesheet default when nothing is playing.
+   All four values it writes - `--h`, the control's `value`, its readout and its `--p` fill - are
+   pure functions of the hue, so one remembered value decides them all: the hue last painted, which
+   starts undefined so the first call still writes everything. Its two callers that are not a drag
+   both pass a hue the control is already showing - `Reset defaults` hands it the current track's
+   own hue, and the skip chain's give-up branch repaints the track already on the card - and each
+   was restating four writes that changed nothing. `paintTrack()` on a real track change moves the
+   hue, so it still writes all four. */
+let pHue;
 function setHue(h){
+  if(h===pHue)return;
+  pHue=h;
   root.setProperty('--h',h);
   EL.hu.value=h;EL.huV.textContent=h+'°';setVT(EL.hu,vtOf('hu',h));
   setFill(EL.hu,h);
